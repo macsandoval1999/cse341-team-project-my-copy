@@ -66,6 +66,8 @@ This repository is set up as a **GitHub template**. Use the template feature to 
 
 The first test run may take longer because MongoDB Memory Server needs to download a MongoDB program. Later test runs reuse that download. Use `npm run test:watch` if you want Vitest to rerun related tests while you work.
 
+Express sessions are stored in the same MongoDB database as the application. Set `SESSION_SECRET` in your local `.env` and in Render's environment variables; use a distinct strong value for each environment.
+
 ### Automated Test Setup
 
 The application and automated tests share the database initialization function in `src/db/initialize.js`. The normal `db:import` command runs it against the database configured in `.env`. Automated tests run it against a temporary MongoDB database instead.

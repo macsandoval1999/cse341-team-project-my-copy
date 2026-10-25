@@ -8,6 +8,7 @@
     },
     "dependencies": {
         "bcrypt": "^6.0.0",
+        "connect-mongo": "^6.0.0",
         "ejs": "^6.0.1",
         "express": "^5.1.0",
         "express-session": "^1.19.0",
@@ -26,7 +27,7 @@
         "lint:fix": "eslint . --fix",
         "swagger": "node swagger.js"
     },
-        "devDependencies": {
+    "devDependencies": {
         "eslint": "^10.6.0",
         "mongodb-memory-server": "^11.2.0",
         "nodemon": "^3.1.10",

@@ -1,4 +1,6 @@
 import express from "express";
+import MongoStore from "connect-mongo";
+import mongoose from "mongoose";
 import Path from "path";
 import { fileURLToPath } from "url";
 import pkg from "./package.json" with { type: "json" };
@@ -12,6 +14,22 @@ import session from "express-session";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = Path.dirname(__filename);
 const SESSION_SECRET = process.env.SESSION_SECRET || "default_secret_key";
+const sessionClientPromise = new Promise((resolve, reject) => {
+    const connection = mongoose.connection;
+    if (connection.readyState === 1) {
+        resolve(connection.getClient());
+        return;
+    }
+
+    connection.once("connected", () => resolve(connection.getClient()));
+    connection.once("error", reject);
+});
+const sessionStore = MongoStore.create({
+    clientPromise: sessionClientPromise,
+    get dbName() {
+        return mongoose.connection.name;
+    }
+});
 
 const app = express();
 
@@ -19,6 +37,7 @@ const app = express();
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc));
 app.use(session({
     secret: SESSION_SECRET,
+    store: sessionStore,
     resave: false,
     saveUninitialized: false,
     rolling: true,
