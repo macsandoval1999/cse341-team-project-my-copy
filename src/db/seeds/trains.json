@@ -1,0 +1,54 @@
+[
+  {
+    "id": "series-e353",
+    "name": "Series E353 Limited Express",
+    "operator": "JR East",
+    "imageUrl": "/images/trains/series-e353-limited-express.png",
+    "imageAlt": "Series E353 limited express train on a scenic rail line",
+    "type": "Limited Express",
+    "maxSpeedKmh": 130,
+    "capacity": 360,
+    "powerSource": "Electric",
+    "bestFor": "Mountain corridor sightseeing and medium-distance comfort",
+    "description": "Tilt-capable train set designed for winding mountain lines with panoramic side windows."
+  },
+  {
+    "id": "kiha-261",
+    "name": "KiHa 261 North Scenic",
+    "operator": "JR Hokkaido",
+    "imageUrl": "/images/trains/kiha-261-north-scenic.png",
+    "imageAlt": "KiHa 261 north scenic diesel train moving through snowy terrain",
+    "type": "Diesel Limited Express",
+    "maxSpeedKmh": 120,
+    "capacity": 290,
+    "powerSource": "Diesel",
+    "bestFor": "Winter operations and remote regional tracks",
+    "description": "Cold-weather-ready unit built for reliable service across snow-heavy terrain."
+  },
+  {
+    "id": "series-287",
+    "name": "Series 287 Coastal Arrow",
+    "operator": "JR West",
+    "imageUrl": "/images/trains/series-287-coastal-arrow.png",
+    "imageAlt": "Series 287 coastal arrow train near the ocean",
+    "type": "Limited Express",
+    "maxSpeedKmh": 130,
+    "capacity": 330,
+    "powerSource": "Electric",
+    "bestFor": "Fast coastal runs with frequent station access",
+    "description": "Balanced trainset combining higher speed operation with easy boarding for travelers."
+  },
+  {
+    "id": "steam-c11",
+    "name": "C11 Heritage Steam Set",
+    "operator": "Heritage Partnership",
+    "imageUrl": "/images/trains/c11-heritage-steam-set.png",
+    "imageAlt": "C11 heritage steam locomotive with excursion passenger cars",
+    "type": "Steam Excursion",
+    "maxSpeedKmh": 65,
+    "capacity": 180,
+    "powerSource": "Steam",
+    "bestFor": "Slow scenic journeys and heritage-focused tourism",
+    "description": "Restored locomotive experience that prioritizes atmosphere and immersive sightseeing."
+  }
+]

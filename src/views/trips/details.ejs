@@ -1,0 +1,118 @@
+<%- include('../partials/header') %>
+
+<article class="route-detail" data-trip-id="<%= details.id %>">
+  <div class="route-header">
+    <div class="route-header-content">
+      <h1 class="route-name"><%= details.name %></h1>
+      <p class="route-description"><%= details.description %></p>
+
+      <% if (details.highlights && details.highlights.length > 0) { %>
+      <div class="highlights">
+        <% details.highlights.forEach(function(highlight) { %>
+        <span class="highlight-tag"><%= highlight %></span>
+        <% }); %>
+      </div>
+      <% } %>
+    </div>
+
+    <% if (details.imageUrl) { %>
+    <div class="route-image">
+      <img src="<%= details.imageUrl %>" alt="<%= details.name %>">
+    </div>
+    <% } %>
+  </div>
+
+  <div class="route-info">
+    <div class="info-grid">
+      <div class="info-item">
+        <span class="info-label">Region</span>
+        <span class="info-value region-<%= details.region %>"><%= details.region.charAt(0).toUpperCase() + details.region.slice(1) %></span>
+      </div>
+
+      <div class="info-item">
+        <span class="info-label">Duration</span>
+        <span class="info-value"><%= details.duration %></span>
+      </div>
+
+      <div class="info-item">
+        <span class="info-label">Distance</span>
+        <span class="info-value"><%= details.distance %> km</span>
+      </div>
+
+      <div class="info-item">
+        <span class="info-label">Best Season</span>
+        <span class="info-value season-<%= details.bestSeason %>"><%= details.bestSeason.charAt(0).toUpperCase() + details.bestSeason.slice(1) %></span>
+      </div>
+
+      <% if (train) { %>
+      <div class="info-item">
+        <span class="info-label">Your Train</span>
+        <a class="info-value" href="/trains/<%= train.id %>">
+          <% if (train.imageUrl) { %>
+          <img src="<%= train.imageUrl %>" alt="<%= train.imageAlt || train.name %>">
+          <% } %>
+          <%= train.name %>
+        </a>
+      </div>
+      <% } %>
+    </div>
+
+    <div class="route-stations">
+      <h2>Trip</h2>
+      <div class="stations">
+        <div class="station">
+          <span class="station-label">Start</span>
+          <span class="station-name-row">
+            <span class="station-name"><%= details.startStation.charAt(0).toUpperCase() + details.startStation.slice(1) %></span>
+            <button type="button" class="station-info-btn" data-station-id="<%= details.startStation %>" aria-haspopup="dialog" aria-label="View station information">ⓘ</button>
+          </span>
+        </div>
+        <div class="station">
+          <span class="station-label">End</span>
+          <span class="station-name-row">
+            <span class="station-name"><%= details.endStation.charAt(0).toUpperCase() + details.endStation.slice(1) %></span>
+            <button type="button" class="station-info-btn" data-station-id="<%= details.endStation %>" aria-haspopup="dialog" aria-label="View station information">ⓘ</button>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="route-operating">
+      <h2>Operating Schedule</h2>
+      <div class="months-grid">
+        <% details.operatingMonths.forEach(function(month) { %>
+        <span class="month-badge"><%= month %></span>
+        <% }); %>
+      </div>
+    </div>
+
+    <div class="route-schedules">
+      <h2>Available Schedules</h2>
+
+      <label for="monthSelect">Select month</label>
+      <select id="monthSelect">
+        <option value="">All operating months</option>
+        <% for (let month = 1; month <= 12; month++) { %>
+        <option value="<%= month %>"><%= month %></option>
+        <% } %>
+      </select>
+
+      <div id="scheduleStatus" class="schedule-status">Loading schedules...</div>
+      <div id="scheduleGrid" class="schedules-grid"></div>
+    </div>
+  </div>
+</article>
+
+<div id="stationPopup" class="station-popup" hidden>
+  <div class="station-popup-backdrop" data-close-popup></div>
+  <div class="station-popup-content" role="dialog" aria-modal="true" aria-labelledby="stationPopupName">
+    <button type="button" class="station-popup-close" data-close-popup aria-label="Close station information">&times;</button>
+    <div id="stationPopupBody" class="station-popup-body">
+      <p>Loading station information...</p>
+    </div>
+  </div>
+</div>
+
+<script src="/js/details.js" defer></script>
+
+<%- include('../partials/footer') %>

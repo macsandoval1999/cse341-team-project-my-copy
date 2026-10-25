@@ -1,0 +1,87 @@
+<%- include('../partials/header') %>
+
+<section class="trains-hero">
+    <h1><%- title %></h1>
+</section>
+
+<div id="filters">
+    Search by Region:
+    <select id="region-filter">
+        <option value="all">All Regions</option>
+        <% regions.forEach((region) => { %>
+            <option value="<%= region %>" <%= query.region === region ? 'selected' : '' %>><%= region.charAt(0).toUpperCase() + region.slice(1) %></option>
+        <% }); %>
+    </select>
+
+    Search by Season:
+    <select id="season-filter">
+        <option value="all">Any Season</option>
+        <% seasons.forEach((season) => { %>
+            <option value="<%= season %>" <%= query.season === season ? 'selected' : '' %>><%= season.charAt(0).toUpperCase() + season.slice(1) %></option>
+        <% }); %>
+    </select>
+</div>
+
+<!--below generates the trip card info dynamically-->
+<div id="trips-list" class="routes-grid">
+    <p>Loading trips...</p>
+</div>
+
+<nav id="pagination"></nav>
+
+<template id="trip-card-template">
+    <div class="route-card">
+        <div class="route-header">
+            <h2 class="route-name"></h2>
+            <span class="route-region"></span>
+        </div>
+
+        <div class="station-info">
+            <div class="station">
+                <div class="station-type">From:</div>
+                <div class="station-name start-station"></div>
+            </div>
+            <div class="route-arrow">→</div>
+            <div class="station">
+                <div class="station-type">To:</div>
+                <div class="station-name end-station"></div>
+            </div>
+        </div>
+
+        <div class="route-details">
+            <div class="detail-item">
+                <span class="detail-icon">🕑</span>
+                <span
+                    ><span class="detail-label">Duration:</span>
+                    <span class="trip-duration"></span
+                ></span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-icon">📍</span>
+                <span
+                    ><span class="detail-label">Distance:</span>
+                    <span class="trip-distance"></span>km</span
+                >
+            </div>
+            <div class="detail-item">
+                <span class="season-badge"></span>
+            </div>
+        </div>
+
+        <div class="route-description"></div>
+
+        <div class="highlights">
+            <div class="highlights-list">
+                <!-- JavaScript will inject highlight tags here -->
+            </div>
+        </div>
+
+        <div class="route-actions">
+            <a href="" class="view-details-btn"> View Details &amp; Book → </a>
+        </div>
+    </div>
+</template>
+
+<script src="/js/trips.js" defer></script>
+
+<%- include('../partials/footer') %>

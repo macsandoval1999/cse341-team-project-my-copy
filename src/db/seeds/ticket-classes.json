@@ -1,0 +1,41 @@
+[
+    {
+        "class": "standard",
+        "name": "Standard Class",
+        "priceMultiplier": 80,
+        "amenities": [
+            "Comfortable seats",
+            "Large windows",
+            "Complimentary tea"
+        ],
+        "description": "Enjoy scenic views from comfortable seats with complimentary refreshments",
+        "availableDays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    },
+    {
+        "class": "premium",
+        "name": "Premium Class",
+        "priceMultiplier": 150,
+        "amenities": [
+            "Panoramic windows",
+            "Meal service",
+            "Reserved seating",
+            "Souvenir photo"
+        ],
+        "description": "Enhanced experience with meal service and panoramic viewing windows",
+        "availableDays": ["Monday", "Wednesday", "Friday", "Saturday", "Sunday"]
+    },
+    {
+        "class": "first",
+        "name": "First Class",
+        "priceMultiplier": 250,
+        "amenities": [
+            "Private compartment",
+            "Multi-course meal",
+            "Champagne service",
+            "Priority boarding",
+            "Souvenir gift"
+        ],
+        "description": "Ultimate luxury with private seating and full dining service",
+        "availableDays": ["Friday", "Saturday", "Sunday"]
+    }
+]

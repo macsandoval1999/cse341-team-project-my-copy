@@ -1,0 +1,73 @@
+<%- include('./partials/header') %>
+
+<section class="trains-catalog">
+    <div class="trains-state" id="bookings-loading">Loading Bookings...</div>
+    <div class="trains-state trains-error" id="bookings-error" hidden></div>
+
+    <div class="trains-grid" id="bookings-list"></div>
+    <div class="pagination-controls">
+        <button id="prev-page" class="btn-pagination" disabled>Previous</button>
+        <span id="current-page">Page 1</span>
+        <button id="next-page" class="btn-pagination">Next</button>
+    </div>
+
+    <div class="sorting-controls">
+        <label for="sort-by">Sort By:</label>
+        <select id="sort-by">
+            <option value="name">Name</option>
+            <option value="date">Booking Date</option>
+            <option value="passengers">Passengers</option>
+        </select>
+    </div>
+    <template id="booking-card-template">
+        <article class="train-card">
+            <header class="train-card-header">
+                <h2 data-field="name"></h2>
+                <span class="train-operator booking-email" data-field="email"></span>
+            </header>
+
+            <p class="train-description" data-field="ticket"></p>
+
+            <dl class="train-specs">
+                <div class="spec-item">
+                    <dt>Trip</dt>
+                    <dd data-field="tripId"></dd>
+                </div>
+                <div class="spec-item">
+                    <dt>Travel Day</dt>
+                    <dd data-field="selectedDay"></dd>
+                </div>
+                <div class="spec-item">
+                    <dt>Passengers</dt>
+                    <dd data-field="passengers"></dd>
+                </div>
+                <div class="spec-item">
+                    <dt>Booked On</dt>
+                    <dd data-field="bookingDate"></dd>
+                </div>
+            </dl>
+
+            <div class="booking-view-actions">
+                <button type="button" class="btn-edit-booking">Edit</button>
+                <button type="button" class="btn-delete-booking">Delete</button>
+            </div>
+
+            <form class="booking-edit-form" hidden>
+                <label>
+                    Travel Day
+                    <input type="text" name="selectedDay" required>
+                </label>
+                <label>
+                    Ticket Class
+                    <input type="text" name="ticketClass" required>
+                </label>
+                <div class="booking-edit-actions">
+                    <button type="submit" class="btn-save-booking">Save</button>
+                    <button type="button" class="btn-cancel-edit">Cancel</button>
+                </div>
+            </form>
+        </article>
+    </template>
+</section>
+
+<%- include('./partials/footer') %>

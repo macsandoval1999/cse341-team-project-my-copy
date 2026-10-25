@@ -1,0 +1,108 @@
+<%- include('./partials/header') %>
+
+<section class="trains-hero">
+    <h1>Register</h1>
+    <% if (isAdmin) { %>
+        <a href="/admin" class="admin-trips-back">&larr; Back to Admin Dashboard</a>
+    <% } %>
+</section>
+<!-- test -->
+<section class="trains-catalog">
+    <form id="register-form" class="auth-form" action="/register" method="POST">
+        <div class="form-group">
+            <label for="name">Name</label>
+            <input
+                type="text"
+                id="name"
+                name="name"
+                value="<%= typeof oldName === 'string' ? oldName : '' %>"
+                required
+            />
+        </div>
+        <div class="form-group">
+            <label for="username">Username</label>
+            <input
+                type="text"
+                id="username"
+                name="username"
+                value="<%= typeof oldUsername === 'string' ? oldUsername : '' %>"
+                autocomplete="username"
+                required
+            />
+        </div>
+        <div class="form-group">
+            <label for="email">Email</label>
+            <input
+                type="email"
+                id="email"
+                name="email"
+                value="<%= typeof oldEmail === 'string' ? oldEmail : '' %>"
+                required
+            />
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <div class="auth-password-field">
+                <input type="password" id="password" name="password" required />
+                <button
+                    type="button"
+                    class="auth-password-toggle"
+                    aria-controls="password"
+                    aria-pressed="false"
+                >
+                    Show
+                </button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="confirm-password">Confirm Password</label>
+            <div class="auth-password-field">
+                <input
+                    type="password"
+                    id="confirm-password"
+                    name="confirm-password"
+                    aria-describedby="password-match-error"
+                    required
+                />
+                <button
+                    type="button"
+                    class="auth-password-toggle"
+                    aria-controls="confirm-password"
+                    aria-pressed="false"
+                >
+                    Show
+                </button>
+            </div>
+            <p
+                id="password-match-error"
+                class="auth-validation-error"
+                role="alert"
+                hidden
+            >
+                Passwords must match.
+            </p>
+        </div>
+        <button type="submit" disabled>Register</button>
+    </form>
+</section>
+
+<dialog
+    id="registration-feedback-dialog"
+    class="auth-feedback-dialog"
+    data-message="<%= typeof registrationError === 'string' ? registrationError : '' %>"
+    aria-labelledby="registration-feedback-title"
+>
+    <div class="auth-feedback-content">
+        <h2 id="registration-feedback-title">Registration issue</h2>
+        <p>
+            <%= typeof registrationError === 'string' ? registrationError : ''
+            %>
+        </p>
+        <button type="button" data-close-auth-feedback>Close</button>
+    </div>
+</dialog>
+
+<script src="/js/auth-feedback.js" defer></script>
+<script src="/js/password-toggle.js" defer></script>
+<script src="/js/register.js" defer></script>
+<%- include('./partials/footer') %>

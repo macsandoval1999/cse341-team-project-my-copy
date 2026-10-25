@@ -1,0 +1,133 @@
+.auth-form {
+    display: grid;
+    gap: var(--space-lg);
+    width: min(100%, 32rem);
+}
+
+.auth-form .form-group {
+    display: grid;
+    gap: var(--space-xs);
+    min-width: 0;
+}
+
+.auth-form .form-group > label {
+    display: block;
+    margin: 0;
+}
+
+.auth-form .form-group > input,
+.auth-form .auth-password-field input {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: none;
+}
+
+.auth-password-field {
+    display: flex;
+    align-items: stretch;
+    gap: var(--space-xs);
+    width: 100%;
+    min-width: 0;
+}
+
+.auth-password-field input {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.auth-password-toggle {
+    flex: 0 0 auto;
+    padding: 0 var(--space-md);
+    border: 1px solid var(--clr-border);
+    background: var(--clr-surface);
+    color: var(--clr-text-primary);
+    box-shadow: none;
+}
+
+.auth-password-toggle:hover {
+    background: var(--clr-surface-alt);
+    box-shadow: none;
+}
+
+.auth-password-toggle:focus-visible {
+    outline: 2px solid var(--clr-primary);
+    outline-offset: 2px;
+}
+
+#register-form button[type="submit"]:disabled {
+    background: var(--clr-border);
+    color: var(--clr-text-muted);
+    box-shadow: none;
+    cursor: not-allowed;
+}
+
+.auth-validation-error {
+    margin-top: var(--space-xs);
+    color: #a43e35;
+    font-size: var(--font-size-sm);
+}
+
+.auth-validation-error[hidden] {
+    display: none;
+}
+
+#register-form button[type="submit"] {
+    justify-self: start;
+}
+
+.auth-form button[type="submit"] {
+    justify-self: start;
+}
+
+.auth-error {
+    width: min(100%, 32rem);
+    margin-bottom: var(--space-lg);
+    color: #a43e35;
+}
+
+.auth-feedback-dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: min(30rem, calc(100vw - 2rem));
+    max-width: none;
+    max-height: calc(100vh - 2rem);
+    margin: 0;
+    transform: translate(-50%, -50%);
+    padding: 0;
+    overflow: auto;
+    border: 1px solid var(--clr-border);
+    border-radius: var(--radius-lg);
+    background: var(--clr-surface);
+    color: var(--clr-text-primary);
+    box-shadow: var(--shadow-lg);
+}
+
+.auth-feedback-dialog::backdrop {
+    background: rgb(16 30 24 / 58%);
+    backdrop-filter: blur(2px);
+}
+
+.auth-feedback-content {
+    display: grid;
+    gap: var(--space-md);
+    padding: var(--space-xl);
+}
+
+.auth-feedback-content h2,
+.auth-feedback-content p {
+    margin: 0;
+}
+
+.auth-feedback-content h2 {
+    font-size: var(--font-size-xl);
+}
+
+.auth-feedback-content p {
+    color: var(--clr-text-secondary);
+}
+
+.auth-feedback-content button {
+    justify-self: end;
+    min-height: 2.75rem;
+}

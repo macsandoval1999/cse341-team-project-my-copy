@@ -1,0 +1,110 @@
+<%- include('./partials/header') %>
+
+<section class="trains-catalog train-page" id="train-info" data-train-id="<%= trainId %>">
+    <div class="trains-state" id="train-info-loading">Loading train...</div>
+    <div class="trains-state trains-error" id="train-info-error" hidden></div>
+
+    <!-- Same markup and classes as the /trains card template, so trains.css styles it the same way -->
+    <article class="train-card" id="train-info-content" hidden>
+        <div class="train-image-wrap" data-field="image-wrap">
+            <img data-field="image" decoding="async">
+        </div>
+
+        <div class="train-card-header">
+            <h1 data-field="name"></h1>
+            <span class="train-operator" data-field="operator"></span>
+        </div>
+
+        <p class="train-description" data-field="description"></p>
+
+        <dl class="train-specs">
+            <div class="spec-item">
+                <dt>Type</dt>
+                <dd data-field="type"></dd>
+            </div>
+            <div class="spec-item">
+                <dt>Top Speed</dt>
+                <dd data-field="speed"></dd>
+            </div>
+            <div class="spec-item">
+                <dt>Capacity</dt>
+                <dd data-field="seats"></dd>
+            </div>
+            <div class="spec-item">
+                <dt>Power</dt>
+                <dd data-field="power"></dd>
+            </div>
+        </dl>
+
+        <p class="train-best-for">
+            <strong>Best For:</strong>
+            <span data-field="best-for"></span>
+        </p>
+    </article>
+</section>
+
+<section class="trains-catalog" id="train-trips">
+    <h2>Trips on this train</h2>
+
+    <div class="trains-state" id="train-trips-loading">Loading trips...</div>
+    <div class="trains-state trains-error" id="train-trips-error" hidden></div>
+
+    <div id="train-trips-list" class="routes-grid"></div>
+
+    <template id="trip-card-template">
+        <div class="route-card">
+            <div class="route-header">
+                <h2 class="route-name"></h2>
+                <span class="route-region"></span>
+            </div>
+
+            <div class="station-info">
+                <div class="station">
+                    <div class="station-type">From:</div>
+                    <div class="station-name start-station"></div>
+                </div>
+                <div class="route-arrow">→</div>
+                <div class="station">
+                    <div class="station-type">To:</div>
+                    <div class="station-name end-station"></div>
+                </div>
+            </div>
+
+            <div class="route-details">
+                <div class="detail-item">
+                    <span class="detail-icon">🕑</span>
+                    <span
+                        ><span class="detail-label">Duration:</span>
+                        <span class="trip-duration"></span
+                    ></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-icon">📍</span>
+                    <span
+                        ><span class="detail-label">Distance:</span>
+                        <span class="trip-distance"></span>km</span
+                    >
+                </div>
+                <div class="detail-item">
+                    <span class="season-badge"></span>
+                </div>
+            </div>
+
+            <div class="route-description"></div>
+
+            <div class="highlights">
+                <div class="highlights-list">
+                    <!-- JavaScript will inject highlight tags here -->
+                </div>
+            </div>
+
+            <div class="route-actions">
+                <a href="" class="view-details-btn"> View Details &amp; Book → </a>
+            </div>
+        </div>
+    </template>
+</section>
+
+<script src="/js/train-details.js" defer></script>
+
+<%- include('./partials/footer') %>

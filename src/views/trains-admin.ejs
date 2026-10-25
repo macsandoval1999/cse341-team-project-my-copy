@@ -1,0 +1,113 @@
+<%- include('./partials/header') %>
+
+<section class="trains-catalog admin-trips admin-trains train-page">
+    <div class="admin-trips-heading trains-hero">
+        <h1>Manage Trains</h1>
+        <a href="/admin" class="admin-trips-back">&larr; Back to Admin Dashboard</a>
+    </div>
+
+    <details class="train-create">
+        <summary>Add a train</summary>
+
+        <!-- The same fields the API accepts. required and min="0" let the browser catch mistakes before any request is sent. -->
+        <form id="train-create-form">
+            <label class="admin-trip-field"><span>Train ID (can't be changed later)</span><input type="text" name="id" required placeholder="n700-shinkansen"></label>
+            <label class="admin-trip-field"><span>Name</span><input type="text" name="name" required></label>
+            <label class="admin-trip-field"><span>Operator</span><input type="text" name="operator" required></label>
+            <label class="admin-trip-field"><span>Type</span><input type="text" name="type" required></label>
+            <label class="admin-trip-field"><span>Top speed (km/h)</span><input type="number" name="maxSpeedKmh" min="0" step="any" required></label>
+            <label class="admin-trip-field"><span>Capacity (seats)</span><input type="number" name="capacity" min="0" step="1" required></label>
+            <label class="admin-trip-field"><span>Power source</span><input type="text" name="powerSource" required></label>
+            <label class="admin-trip-field"><span>Image URL (optional)</span><input type="text" name="imageUrl" placeholder="/images/trains/..."></label>
+            <label class="admin-trip-field"><span>Image description (optional)</span><input type="text" name="imageAlt"></label>
+            <label class="admin-trip-field"><span>Best for (optional)</span><input type="text" name="bestFor"></label>
+            <label class="admin-trip-field"><span>Description (optional)</span><textarea name="description" rows="3"></textarea></label>
+
+            <div class="admin-trip-actions">
+                <button type="submit">Add train</button>
+            </div>
+        </form>
+    </details>
+
+    <p id="admin-trains-message" class="trains-state" role="status" aria-live="polite"></p>
+
+    <div class="trains-state" id="admin-trains-loading">Loading trains...</div>
+    <div class="trains-grid" id="admin-trains-list"></div>
+
+    <template id="admin-train-template">
+        <article class="train-card">
+            <div class="train-image-wrap" data-field="image-wrap">
+                <img data-field="image" loading="lazy" decoding="async">
+            </div>
+
+            <div class="train-card-header">
+                <h2><a data-field="name"></a></h2>
+                <span class="train-operator" data-field="operator"></span>
+                <small>ID: <code data-field="id"></code></small>
+            </div>
+
+            <dl class="train-specs">
+                <div class="spec-item">
+                    <dt>Type</dt>
+                    <dd data-field="type"></dd>
+                </div>
+                <div class="spec-item">
+                    <dt>Top Speed</dt>
+                    <dd data-field="speed"></dd>
+                </div>
+                <div class="spec-item">
+                    <dt>Capacity</dt>
+                    <dd data-field="seats"></dd>
+                </div>
+                <div class="spec-item">
+                    <dt>Power</dt>
+                    <dd data-field="power"></dd>
+                </div>
+            </dl>
+
+            <h3>Trips on this train</h3>
+            <p data-field="no-trips">No trips use this train.</p>
+            <ul class="admin-train-trips" data-field="trips"></ul>
+
+            <div class="admin-trip-card-actions">
+                <button type="button" data-action="edit">Edit</button>
+                <button type="button" class="delete-action-btn" data-action="delete">Delete</button>
+                <small data-field="delete-note"></small>
+            </div>
+
+            <!-- Editing form. The id is shown but read-only, because trips reference trains by id. -->
+            <form data-field="edit-form" hidden>
+                <label class="admin-trip-field"><span>Name</span><input type="text" name="name" required></label>
+                <label class="admin-trip-field"><span>Operator</span><input type="text" name="operator" required></label>
+                <label class="admin-trip-field"><span>Type</span><input type="text" name="type" required></label>
+                <label class="admin-trip-field"><span>Top speed (km/h)</span><input type="number" name="maxSpeedKmh" min="0" step="any" required></label>
+                <label class="admin-trip-field"><span>Capacity (seats)</span><input type="number" name="capacity" min="0" step="1" required></label>
+                <label class="admin-trip-field"><span>Power source</span><input type="text" name="powerSource" required></label>
+                <label class="admin-trip-field"><span>Image URL</span><input type="text" name="imageUrl"></label>
+                <label class="admin-trip-field"><span>Image description</span><input type="text" name="imageAlt"></label>
+                <label class="admin-trip-field"><span>Best for</span><input type="text" name="bestFor"></label>
+                <label class="admin-trip-field"><span>Description</span><textarea name="description" rows="3"></textarea></label>
+
+                <div class="admin-trip-actions">
+                    <button type="button" class="admin-trip-cancel" data-action="cancel-edit">Cancel</button>
+                    <button type="submit">Save changes</button>
+                </div>
+            </form>
+        </article>
+    </template>
+
+    <template id="admin-train-trip-template">
+        <li>
+            <a data-field="trip-name"></a>
+            <label>
+                Move to
+                <select data-field="move-select"></select>
+            </label>
+            <button type="button" data-action="move">Move</button>
+        </li>
+    </template>
+</section>
+
+<script src="/js/trains-admin.js" defer></script>
+
+<%- include('./partials/footer') %>

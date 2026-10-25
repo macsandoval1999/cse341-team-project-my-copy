@@ -1,0 +1,39 @@
+{
+    "name": "cse341-team-project-my-copy",
+    "version": "1.0.0",
+    "description": "A brownfield web development training project designed to build real-world software engineering expertise through reverse engineering, refactoring, and debugging existing codebases.",
+    "main": "app.js",
+    "directories": {
+        "test": "tests"
+    },
+    "dependencies": {
+        "bcrypt": "^6.0.0",
+        "ejs": "^6.0.1",
+        "express": "^5.1.0",
+        "express-session": "^1.19.0",
+        "mongodb": "^7.5.0",
+        "mongoose": "^9.10.1",
+        "swagger-ui-express": "^5.0.1"
+    },
+    "scripts": {
+        "db:import": "node --env-file=.env src/db/import.js",
+        "dev": "nodemon --env-file=.env server.js",
+        "reset": "node restore.js 3000 3001",
+        "start": "node --env-file=.env server.js",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "swagger": "node swagger.js"
+    },
+        "devDependencies": {
+        "eslint": "^10.6.0",
+        "mongodb-memory-server": "^11.2.0",
+        "nodemon": "^3.1.10",
+        "supertest": "^7.2.2",
+        "swagger-jsdoc": "^6.3.0",
+        "vitest": "^4.1.10",
+        "ws": "^8.18.3"
+    },
+    "type": "module"
+}

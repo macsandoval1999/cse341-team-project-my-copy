@@ -1,0 +1,52 @@
+<%- include('./partials/header') %>
+
+<section class="trains-hero">
+    <h1>Login</h1>
+</section>
+<!-- test -->
+<section class="trains-catalog">
+    <form id="login-form" class="auth-form" action="/login" method="POST">
+        <div class="form-group">
+            <label for="identifier">Email or username</label>
+            <input
+                type="text"
+                id="identifier"
+                name="identifier"
+                value="<%= typeof oldIdentifier === 'string' ? oldIdentifier : '' %>"
+                autocomplete="username"
+                required
+            />
+        </div>
+        <div class="form-group">
+            <label for="password">Password</label>
+            <div class="auth-password-field">
+                <input type="password" id="password" name="password" required />
+                <button
+                    type="button"
+                    class="auth-password-toggle"
+                    aria-controls="password"
+                    aria-pressed="false"
+                >
+                    Show
+                </button>
+            </div>
+        </div>
+        <button type="submit">Login</button>
+    </form>
+</section>
+
+<dialog
+    class="auth-feedback-dialog"
+    data-message="<%= typeof loginError === 'string' ? loginError : '' %>"
+    aria-labelledby="login-feedback-title"
+>
+    <div class="auth-feedback-content">
+        <h2 id="login-feedback-title">Login unavailable</h2>
+        <p><%= typeof loginError === 'string' ? loginError : '' %></p>
+        <button type="button" data-close-auth-feedback>Close</button>
+    </div>
+</dialog>
+
+<script src="/js/auth-feedback.js" defer></script>
+<script src="/js/password-toggle.js" defer></script>
+<%- include('./partials/footer') %>

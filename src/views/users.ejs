@@ -1,0 +1,107 @@
+<%- include('./partials/header') %>
+<section class="trains-hero users-hero">
+    <h1><%= title %></h1>
+    <% if (isAdmin) { %>
+        <a href="/admin" class="admin-trips-back">&larr; Back to Admin Dashboard</a>
+    <% } %>
+</section>
+
+<section
+    class="users-admin"
+    id="users-admin"
+    data-users-endpoint="<%= usersEndpoint %>"
+    data-is-admin-list="<%= isAdminList ? 'true' : 'false' %>"
+>
+    <% if (isAdminList) { %>
+        <form class="users-controls" id="users-controls" role="search">
+            <label class="users-search-control" for="users-search">
+                <span>Search users</span>
+                <input id="users-search" name="q" type="search" maxlength="100" placeholder="Name, username, or email">
+            </label>
+            <label for="users-role-filter">
+                <span>Role</span>
+                <select id="users-role-filter" name="role">
+                    <option value="">All roles</option>
+                    <option value="admin">Admin</option>
+                    <option value="customer">Customer</option>
+                </select>
+            </label>
+            <label for="users-sort-field">
+                <span>Sort by</span>
+                <select id="users-sort-field" name="sort">
+                    <option value="username" selected>Username</option>
+                    <option value="name">Display name</option>
+                    <option value="email">Email</option>
+                    <option value="role">Role</option>
+                </select>
+            </label>
+            <label for="users-sort-order">
+                <span>Order</span>
+                <select id="users-sort-order" name="order">
+                    <option value="asc" selected>Ascending</option>
+                    <option value="desc">Descending</option>
+                </select>
+            </label>
+            <div class="users-control-actions">
+                <button type="submit">Search</button>
+                <button type="button" id="users-reset">Reset</button>
+            </div>
+        </form>
+        <p class="users-results-count" id="users-results-count" aria-live="polite"></p>
+    <% } %>
+    <p id="users-loading" role="status">Loading users...</p>
+    <p id="users-error" class="users-error" role="alert" hidden></p>
+    <p id="users-empty" hidden>No users found.</p>
+    <div class="users-list" id="users-list" aria-live="polite"></div>
+    <% if (isAdminList) { %>
+        <nav class="users-pagination" id="users-pagination" aria-label="User pages" hidden>
+            <button type="button" id="users-previous" aria-label="Previous page">Previous</button>
+            <div class="users-page-links" id="users-page-links" aria-label="Page numbers"></div>
+            <button type="button" id="users-next" aria-label="Next page">Next</button>
+        </nav>
+    <% } %>
+
+    <template id="user-row-template">
+        <article class="user-card">
+            <div class="user-details">
+                <h2 data-field="username"></h2>
+                <p data-field="name"></p>
+                <p data-field="email"></p>
+                <p class="user-role" data-field="role"></p>
+            </div>
+            <button type="button" class="user-edit" aria-label="Edit user" title="Edit user">&#9998;</button>
+        </article>
+    </template>
+
+    <template id="user-edit-template">
+        <form class="user-card user-edit-form">
+            <label>
+                <span>Name</span>
+                <input name="name" autocomplete="name" required>
+            </label>
+            <label>
+                <span>Email</span>
+                <input name="email" type="email" autocomplete="email" required>
+            </label>
+            <% if (isAdmin) { %>
+                <label class="user-role-select">
+                    <span>Role</span>
+                    <select name="role">
+                        <option value="customer">Customer</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </label>
+            <% } else { %>
+                <p class="user-role" data-field="role"></p>
+            <% } %>
+            <div class="user-actions">
+                <button type="submit" class="user-save">Save</button>
+                <button type="button" class="user-cancel">Cancel</button>
+                <button type="button" class="user-delete">Delete</button>
+            </div>
+        </form>
+    </template>
+</section>
+
+<script src="/js/users.js" defer></script>
+<%- include('./partials/footer') %>

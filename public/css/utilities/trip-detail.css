@@ -1,0 +1,499 @@
+article.route-detail {
+    max-width: var(--content-max-width);
+    margin: 0 auto;
+
+    .route-header {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-lg);
+        margin-bottom: var(--space-xl);
+
+        .route-header-content {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+
+            .route-name {
+                font-size: var(--font-size-2xl);
+                line-height: var(--line-height-sm);
+                color: var(--clr-text-primary);
+                margin: 0;
+            }
+
+            .route-description {
+                font-size: var(--font-size-md);
+                line-height: var(--line-height-lg);
+                color: var(--clr-text-secondary);
+                margin: 0;
+            }
+
+            .highlights {
+                display: flex;
+                gap: var(--space-sm);
+                flex-wrap: wrap;
+                margin-top: var(--space-xs);
+
+                .highlight-tag {
+                    background-color: var(--clr-primary-pale);
+                    border: 1px solid var(--clr-border);
+                    color: var(--clr-text-secondary);
+                    padding: calc(var(--space-xs) / 2) var(--space-sm);
+                    font-size: var(--font-size-sm);
+                    line-height: var(--line-height-sm);
+                    border-radius: var(--radius-sm);
+                }
+            }
+        }
+
+        .route-image {
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+            width: 100%;
+            aspect-ratio: 16 / 9;
+
+            img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+            }
+        }
+    }
+
+    .route-info {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-xl);
+
+        /* Flexbox instead of grid so a partly filled last row is centered,
+           no matter how many info cards there are. --info-columns sets cards per row. */
+        .info-grid {
+            --info-columns: 1;
+            --info-gap: var(--space-md);
+
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: var(--info-gap);
+
+            .info-item {
+                /* Same width a grid column would have: the row minus the gaps, split evenly */
+                flex: 0 0 calc((100% - (var(--info-columns) - 1) * var(--info-gap)) / var(--info-columns));
+                display: flex;
+                flex-direction: column;
+                gap: var(--space-xs);
+                padding: var(--space-md);
+                background-color: var(--clr-surface);
+                border: 1px solid var(--clr-border-light);
+                border-radius: var(--radius-md);
+
+                .info-label {
+                    font-size: var(--font-size-xs);
+                    color: var(--clr-text-muted);
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                }
+
+                .info-value {
+                    font-size: var(--font-size-lg);
+                    font-weight: 500;
+                    color: var(--clr-text-primary);
+
+                    &.region-central {
+                        color: var(--clr-region-central-text);
+                    }
+
+                    &.region-northern {
+                        color: var(--clr-region-northern-text);
+                    }
+
+                    &.region-kansai {
+                        color: var(--clr-region-kansai-text);
+                    }
+
+                    &.region-hokkaido {
+                        color: var(--clr-region-hokkaido-text);
+                    }
+
+                    &.season-spring {
+                        color: var(--clr-spring-text);
+                    }
+
+                    &.season-summer {
+                        color: var(--clr-summer-text);
+                    }
+
+                    &.season-autumn {
+                        color: var(--clr-autumn-text);
+                    }
+
+                    &.season-winter {
+                        color: var(--clr-winter-text);
+                    }
+                }
+            }
+        }
+
+        .route-stations {
+
+            .stations {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                gap: var(--space-md);
+                padding: var(--space-lg);
+                background-color: var(--clr-surface);
+                border: 1px solid var(--clr-border-light);
+                border-radius: var(--radius-md);
+
+                .station {
+                    display: flex;
+                    flex-direction: column;
+                    gap: var(--space-xs);
+
+                    .station-label {
+                        font-size: var(--font-size-xs);
+                        color: var(--clr-text-muted);
+                        text-transform: uppercase;
+                        letter-spacing: 0.05em;
+                    }
+
+                    .station-name-row {
+                        display: flex;
+                        align-items: center;
+                        gap: var(--space-xs);
+                    }
+
+                    .station-name {
+                        font-size: var(--font-size-lg);
+                        font-weight: 500;
+                        color: var(--clr-primary);
+                    }
+
+                    .station-info-btn {
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        width: 1.5rem;
+                        height: 1.5rem;
+                        padding: 0;
+                        border: 1px solid var(--clr-border);
+                        border-radius: 50%;
+                        background-color: var(--clr-surface);
+                        color: var(--clr-text-secondary);
+                        cursor: pointer;
+                        font-size: var(--font-size-sm);
+                        line-height: 1;
+                        transition: all 0.2s ease;
+
+                        &:hover,
+                        &:focus-visible {
+                            background-color: var(--clr-primary-pale);
+                            color: var(--clr-primary);
+                        }
+                    }
+                }
+            }
+        }
+
+        .route-operating {
+
+            .months-grid {
+                display: flex;
+                flex-wrap: wrap;
+                gap: var(--space-sm);
+
+                .month-badge {
+                    padding: var(--space-sm) var(--space-md);
+                    background-color: var(--clr-surface);
+                    border: 1px solid var(--clr-border-light);
+                    border-radius: var(--radius-md);
+                    color: var(--clr-text-primary);
+                    font-size: var(--font-size-sm);
+                    font-weight: 500;
+                    min-width: 48px;
+                    text-align: center;
+                }
+            }
+        }
+
+        .route-schedules {
+            grid-area: schedules;
+
+            .schedules-grid {
+                display: flex;
+                flex-direction: column;
+                gap: var(--space-md);
+
+                .schedule-card {
+                    display: flex;
+                    flex-direction: column;
+                    gap: var(--space-md);
+                    padding: var(--space-lg);
+                    background-color: var(--clr-surface);
+                    border: 1px solid var(--clr-border-light);
+                    border-radius: var(--radius-md);
+
+                    .schedule-times {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: var(--space-lg);
+
+                        .time-block {
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            gap: var(--space-xs);
+
+                            .time-label {
+                                font-size: var(--font-size-xs);
+                                color: var(--clr-text-muted);
+                                text-transform: uppercase;
+                                letter-spacing: 0.05em;
+                            }
+
+                            .time-value {
+                                font-size: var(--font-size-2xl);
+                                font-weight: 500;
+                                color: var(--clr-text-primary);
+                            }
+                        }
+
+                        .time-arrow {
+                            font-size: var(--font-size-lg);
+                            color: var(--clr-text-muted);
+                        }
+                    }
+
+                    .schedule-days {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: var(--space-xs);
+                        justify-content: center;
+
+                        .day-badge {
+                            padding: var(--space-xs) var(--space-sm);
+                            background-color: var(--clr-surface);
+                            border: 1px solid var(--clr-border-light);
+                            border-radius: var(--radius-md);
+                            color: var(--clr-text-primary);
+                            font-size: var(--font-size-sm);
+                            font-weight: 500;
+                            min-width: 44px;
+                            text-align: center;
+                            text-transform: capitalize;
+                        }
+                    }
+
+                    .book-btn {
+                        display: inline-block;
+                        padding: var(--space-sm) var(--space-lg);
+                        background-color: var(--clr-primary);
+                        color: var(--clr-text-alt-primary);
+                        border-radius: var(--radius-md);
+                        text-decoration: none;
+                        text-align: center;
+                        font-weight: 500;
+                        transition: all 0.2s ease;
+
+                        &:hover {
+                            background-color: var(--clr-accent);
+                            box-shadow: var(--shadow-md);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @media (min-width: 768px) {
+        .route-header {
+            flex-direction: row;
+            gap: var(--space-xl);
+            margin-bottom: var(--space-2xl);
+
+            .route-header-content {
+                flex: 1;
+
+                .route-name {
+                    font-size: var(--font-size-3xl);
+                }
+
+                .route-description {
+                    font-size: var(--font-size-lg);
+                }
+            }
+
+            .route-image {
+                flex: 1;
+                max-width: 50%;
+            }
+        }
+
+        .route-info {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            grid-template-rows: auto auto auto;
+            grid-template-areas:
+                "info info"
+                "stations operations"
+                "schedules schedules";
+
+            .info-grid {
+                grid-area: info;
+                --info-columns: 2;
+                --info-gap: var(--space-lg);
+            }
+
+            .route-stations {
+                grid-area: stations;
+
+                .stations {
+                    display: inline-flex;
+                    flex-direction: row;
+                    align-items: center;
+                    justify-content: space-between;
+                    column-gap: var(--space-2xl);
+
+                    .station {
+                        flex: 0 0 auto;
+                    }
+                }
+            }
+
+            .route-operating {
+                grid-area: operations;
+            }
+
+            .route-schedules {
+                grid-area: schedules;
+
+                .schedules-grid {
+                    display: grid;
+                    grid-template-columns: repeat(2, 1fr);
+                    gap: var(--space-lg);
+                }
+            }
+        }
+    }
+
+    @media (min-width: 1024px) {
+        .route-info {
+            grid-template-columns: 1fr 2fr;
+
+            .info-grid {
+                --info-columns: 4;
+            }
+
+            .route-stations {
+                grid-area: stations;
+
+                .stations {
+                    display: flex;
+                }
+            }
+
+            .route-schedules {
+                .schedules-grid {
+                    display: grid;
+                    grid-template-columns: repeat(3, 1fr);
+                    gap: var(--space-lg);
+                }
+            }
+        }
+    }
+}
+
+.station-popup {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .station-popup-backdrop {
+        position: absolute;
+        inset: 0;
+        background-color: rgb(0 0 0 / 55%);
+    }
+
+    .station-popup-content {
+        position: relative;
+        max-width: 480px;
+        width: calc(100% - var(--space-xl));
+        max-height: 80vh;
+        overflow-y: auto;
+        background-color: var(--clr-surface);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        padding: var(--space-xl);
+
+        .station-popup-close {
+            position: absolute;
+            top: var(--space-sm);
+            right: var(--space-sm);
+            width: 2rem;
+            height: 2rem;
+            padding: 0;
+            border: none;
+            border-radius: 50%;
+            background-color: transparent;
+            color: var(--clr-text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: var(--font-size-lg);
+            line-height: 1;
+            cursor: pointer;
+
+            &:hover,
+            &:focus-visible {
+                background-color: var(--clr-primary-pale);
+                color: var(--clr-primary);
+            }
+        }
+
+        .station-popup-name {
+            font-size: var(--font-size-xl);
+            color: var(--clr-text-primary);
+            margin: 0 0 var(--space-xs);
+        }
+
+        .station-popup-meta {
+            font-size: var(--font-size-sm);
+            color: var(--clr-text-muted);
+            margin: 0 0 var(--space-md);
+        }
+
+        .station-popup-description {
+            font-size: var(--font-size-md);
+            color: var(--clr-text-secondary);
+            line-height: var(--line-height-lg);
+            margin: 0 0 var(--space-md);
+        }
+
+        .station-popup-facilities {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-sm);
+
+            .facility-badge {
+                background-color: var(--clr-primary-pale);
+                border: 1px solid var(--clr-border);
+                color: var(--clr-text-secondary);
+                padding: calc(var(--space-xs) / 2) var(--space-sm);
+                font-size: var(--font-size-sm);
+                line-height: var(--line-height-sm);
+                border-radius: var(--radius-sm);
+                text-transform: capitalize;
+            }
+        }
+    }
+}
+
+.station-popup[hidden] {
+    display: none;
+}

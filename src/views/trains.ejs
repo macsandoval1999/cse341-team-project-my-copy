@@ -1,0 +1,72 @@
+<%- include('./partials/header') %>
+
+<section class="trains-hero">
+    <h1>Learn about our Trains</h1>
+    <p>
+        Explore the physical trains that power scenic the trips across the Kizuna Rail network.
+    </p>
+</section>
+<!-- test -->
+<section class="trains-catalog">
+    <div class="trains-filters" id="trains-filters">
+        <input type="search" id="trains-search" placeholder="Search trains...">
+        <select id="trains-type-filter">
+            <option value="">All Types</option>
+        </select>
+        <select id="trains-power-filter">
+            <option value="">All Power Sources</option>
+        </select>
+    </div>
+    <div class="trains-state" id="trains-loading">Loading trains...</div>
+    <div class="trains-state trains-error" id="trains-error" hidden></div>
+    <div class="trains-state" id="trains-empty" hidden>No trains match your search or filters.</div>
+
+    <div class="trains-grid" id="trains-list"></div>
+
+    <div class="trains-pagination" id="trains-pagination" hidden>
+        <button type="button" id="trains-prev-page">Previous</button>
+        <span id="trains-page-indicator"></span>
+        <button type="button" id="trains-next-page">Next</button>
+    </div>
+
+    <template id="train-card-template">
+        <article class="train-card">
+            <div class="train-image-wrap">
+                <img data-field="image" loading="lazy" decoding="async">
+            </div>
+
+            <header class="train-card-header">
+                <h2><a data-field="name"></a></h2>
+                <span class="train-operator" data-field="operator"></span>
+            </header>
+
+            <p class="train-description" data-field="description"></p>
+
+            <dl class="train-specs">
+                <div class="spec-item">
+                    <dt>Type</dt>
+                    <dd data-field="type"></dd>
+                </div>
+                <div class="spec-item">
+                    <dt>Top Speed</dt>
+                    <dd data-field="speed"></dd>
+                </div>
+                <div class="spec-item">
+                    <dt>Capacity</dt>
+                    <dd data-field="seats"></dd>
+                </div>
+                <div class="spec-item">
+                    <dt>Power</dt>
+                    <dd data-field="power"></dd>
+                </div>
+            </dl>
+
+            <p class="train-best-for">
+                <strong>Best For:</strong>
+                <span data-field="best-for"></span>
+            </p>
+        </article>
+    </template>
+</section>
+
+<%- include('./partials/footer') %>
