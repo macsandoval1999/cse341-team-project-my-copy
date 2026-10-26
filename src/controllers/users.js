@@ -15,6 +15,11 @@ import { createPagination, parseListQuery } from "../utils/list-query.js";
 
 const allowedSortFields = ["name", "username", "email", "role"];
 const allowedUserRoles = ["admin", "customer"];
+const isRequestObject = (value) =>
+    value !== null && typeof value === "object" && !Array.isArray(value);
+
+const getUnknownFields = (body, allowedFields) =>
+    Object.keys(body).filter((field) => !allowedFields.includes(field));
 
 const normalizeName = (value) =>
     value
@@ -170,18 +175,44 @@ export async function accountPage(req, res) {
 
 export async function updateUser(req, res) {
     try {
-        let name = "";
-        if (typeof req.body?.name === "string") {
-            name = normalizeName(req.body.name);
+        const body = req.body;
+        if (!isRequestObject(body)) {
+            return res.status(400).json({ error: "User information must be an object" });
         }
-        const hasUsername = req.body?.username !== undefined;
+
+        const unknownFields = getUnknownFields(body, [
+            "name",
+            "email",
+            "username",
+            "role",
+        ]);
+        if (unknownFields.length > 0) {
+            return res.status(400).json({
+                error: `Unknown user fields: ${unknownFields.join(", ")}`,
+            });
+        }
+
+        const invalidFields = ["name", "email", "username", "role"].filter(
+            (field) => body[field] !== undefined && typeof body[field] !== "string"
+        );
+        if (invalidFields.length > 0) {
+            return res.status(400).json({
+                error: `User fields must be strings: ${invalidFields.join(", ")}`,
+            });
+        }
+
+        let name = "";
+        if (typeof body.name === "string") {
+            name = normalizeName(body.name);
+        }
+        const hasUsername = body.username !== undefined;
         let username = "";
-        if (typeof req.body?.username === "string") {
-            username = normalizeUsername(req.body.username);
+        if (typeof body.username === "string") {
+            username = normalizeUsername(body.username);
         }
         let email = "";
-        if (typeof req.body?.email === "string") {
-            email = req.body.email.trim().toLowerCase();
+        if (typeof body.email === "string") {
+            email = body.email.trim().toLowerCase();
         }
         if (!name || !email) {
             return res
@@ -227,15 +258,15 @@ export async function updateUser(req, res) {
             }
         }
 
-        if (req.body?.role !== undefined) {
+        if (body.role !== undefined) {
             if (!hasRole(req.user, "admin")) {
                 return res
                     .status(403)
                     .json({ error: "Only admins can change user roles" });
             }
             let requestedRole = "";
-            if (typeof req.body.role === "string") {
-                requestedRole = req.body.role.trim().toLowerCase();
+            if (typeof body.role === "string") {
+                requestedRole = body.role.trim().toLowerCase();
             }
             if (!["admin", "customer"].includes(requestedRole)) {
                 return res.status(400).json({ error: "Invalid user role" });
@@ -310,24 +341,55 @@ export async function deleteUser(req, res) {
 
 export async function register(req, res) {
     const apiRequest = req.path.startsWith("/api/");
+    const body = req.body;
+    const allowedFields = apiRequest
+        ? ["name", "username", "email", "password"]
+        : ["name", "username", "email", "password", "confirm-password"];
+    if (!isRequestObject(body)) {
+        if (apiRequest) {
+            return res.status(400).json({ error: "Registration data must be an object" });
+        }
+        return res.redirect("/register");
+    }
+
+    const unknownFields = getUnknownFields(body, allowedFields);
+    if (unknownFields.length > 0) {
+        if (apiRequest) {
+            return res.status(400).json({
+                error: `Unknown registration fields: ${unknownFields.join(", ")}`,
+            });
+        }
+        return res.redirect("/register");
+    }
+
+    const invalidFields = ["name", "username", "email", "password", "confirm-password"]
+        .filter((field) => body[field] !== undefined && typeof body[field] !== "string");
+    if (invalidFields.length > 0) {
+        if (apiRequest) {
+            return res.status(400).json({
+                error: `Registration fields must be strings: ${invalidFields.join(", ")}`,
+            });
+        }
+        return res.redirect("/register");
+    }
+
     let name = "";
-    if (typeof req.body?.name === "string") {
-        name = normalizeName(req.body.name);
+    if (typeof body.name === "string") {
+        name = normalizeName(body.name);
     }
     let username = "";
-    if (typeof req.body?.username === "string") {
-        username = normalizeUsername(req.body.username);
+    if (typeof body.username === "string") {
+        username = normalizeUsername(body.username);
     }
     let email = "";
-    if (typeof req.body?.email === "string") {
-        email = req.body.email.trim().toLowerCase();
+    if (typeof body.email === "string") {
+        email = body.email.trim().toLowerCase();
     }
     let password = "";
-    if (typeof req.body?.password === "string") {
-        password = req.body.password;
+    if (typeof body.password === "string") {
+        password = body.password;
     }
-    const confirmPassword =
-        req.body?.["confirm-password"] ?? req.body?.confirmPassword;
+    const confirmPassword = body["confirm-password"];
 
     if (
         !name ||

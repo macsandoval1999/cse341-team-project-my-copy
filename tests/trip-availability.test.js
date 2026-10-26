@@ -5,6 +5,7 @@ import { createUser } from "../src/models/users.js";
 import Trip from "../src/models/schemas/trips.js";
 import Booking from "../src/models/schemas/bookings.js";
 import Schedule from "../src/models/schemas/schedules.js";
+import { User } from "../src/models/schemas/users.js";
 
 const markTripUnavailable = async () => {
     await Trip.collection.updateOne(
@@ -243,5 +244,75 @@ describe("trip booking availability", () => {
 
         expect(response.status).toBe(201);
         expect(await Booking.countDocuments()).toBe(1);
+    });
+
+    test("rejects unknown booking and passenger fields", async () => {
+        const agent = await loginAsCustomer();
+        const validBooking = {
+            scheduleId: 1,
+            tripId: "alpine-panorama",
+            ticketClass: "standard",
+            selectedDay: "monday",
+            passengers: [{
+                firstName: "Test",
+                lastName: "Passenger",
+                email: "passenger@example.com",
+                phone: "555-0100",
+            }],
+        };
+        const unknownBookingField = await agent
+            .post("/api/bookings")
+            .send({ ...validBooking, status: "confirmed" });
+        const unknownPassengerField = await agent
+            .post("/api/bookings")
+            .send({
+                ...validBooking,
+                passengers: [{
+                    ...validBooking.passengers[0],
+                    passportNumber: "123456",
+                }],
+            });
+
+        expect(unknownBookingField.status).toBe(400);
+        expect(unknownBookingField.body.error).toContain("Unknown booking fields");
+        expect(unknownPassengerField.status).toBe(400);
+        expect(unknownPassengerField.body.error).toContain("Unknown passenger fields");
+        expect(await Booking.countDocuments()).toBe(0);
+    });
+
+    test("rejects malformed booking update shapes and non-string ticket classes", async () => {
+        const agent = await loginAsCustomer();
+        const user = await User.findOne({ email: "trip-availability@example.com" });
+        const booking = await Booking.create({
+            id: "request-shape-booking",
+            userId: user._id,
+            scheduleId: 1,
+            tripId: "alpine-panorama",
+            ticketClass: "standard",
+            selectedDay: "monday",
+            passengers: [{
+                firstName: "Test",
+                lastName: "Passenger",
+                email: "passenger@example.com",
+                phone: "555-0100",
+            }],
+        });
+
+        const unknownFieldResponse = await agent
+            .put(`/api/bookings/${booking.id}`)
+            .send({ passengers: booking.passengers, status: "confirmed" });
+        const mixedUpdateResponse = await agent
+            .put(`/api/bookings/${booking.id}`)
+            .send({ passengers: booking.passengers, ticketClass: "premium" });
+        const invalidTicketClassResponse = await agent
+            .put(`/api/bookings/${booking.id}`)
+            .send({ ticketClass: ["premium"] });
+
+        expect(unknownFieldResponse.status).toBe(400);
+        expect(unknownFieldResponse.body.error).toContain("Unknown booking update fields");
+        expect(mixedUpdateResponse.status).toBe(400);
+        expect(invalidTicketClassResponse.status).toBe(400);
+        expect(invalidTicketClassResponse.body.error).toContain("string");
+        expect((await Booking.findById(booking._id)).ticketClass).toBe("standard");
     });
 });

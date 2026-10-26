@@ -278,6 +278,62 @@ describe("POST /api/users", () => {
         // Assert
         expect(response.status).toBe(409);
     });
+
+    test("rejects unknown registration fields", async () => {
+        const response = await request(app).post("/api/users").send({
+            name: "New Person",
+            username: "new-person",
+            email: "new@example.com",
+            password: "a new password",
+            role: "admin",
+        });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toContain("Unknown registration fields");
+        expect(await User.findOne({ email: "new@example.com" })).toBeNull();
+    });
+
+    test("rejects non-string registration fields", async () => {
+        const response = await request(app).post("/api/auth/register").send({
+            name: "New Person",
+            username: "new-person",
+            email: "new@example.com",
+            password: ["not", "a", "string"],
+        });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toContain("password");
+        expect(await User.findOne({ email: "new@example.com" })).toBeNull();
+    });
+});
+
+describe("POST /api/auth/login request validation", () => {
+    test("rejects unknown fields and multiple identifier aliases", async () => {
+        const extraFieldResponse = await request(app)
+            .post("/api/auth/login")
+            .send({ email: "customer@example.com", password: "known test password", role: "admin" });
+        const multipleIdentifiersResponse = await request(app)
+            .post("/api/auth/login")
+            .send({
+                email: "customer@example.com",
+                username: "test-customer",
+                password: "known test password",
+            });
+
+        expect(extraFieldResponse.status).toBe(400);
+        expect(extraFieldResponse.body.error).toContain("Unknown login fields");
+        expect(multipleIdentifiersResponse.status).toBe(400);
+        expect(multipleIdentifiersResponse.body.error).toContain("exactly one");
+    });
+
+    test("rejects non-string login fields", async () => {
+        const response = await request(app)
+            .post("/api/auth/login")
+            .send({ email: "customer@example.com", password: 123 });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toContain("password");
+    });
 });
 
 /* Tests for the PUT /api/users/:id endpoint */
@@ -347,6 +403,35 @@ describe("PUT /api/users/:id", () => {
 
         // Assert
         expect(response.status).toBe(403);
+    });
+
+    test("rejects unknown fields", async () => {
+        const customer = await User.findOne({ email: "customer@example.com" });
+        const agent = await signIn("customer@example.com");
+
+        const response = await agent.put(`/api/users/${customer._id}`).send({
+            name: "Test Customer",
+            email: "customer@example.com",
+            isAdmin: true,
+        });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toContain("Unknown user fields");
+        expect((await User.findById(customer._id)).name).toBe("Test Customer");
+    });
+
+    test("rejects non-string user fields", async () => {
+        const customer = await User.findOne({ email: "customer@example.com" });
+        const agent = await signIn("customer@example.com");
+
+        const response = await agent.put(`/api/users/${customer._id}`).send({
+            name: { first: "Test" },
+            email: "customer@example.com",
+        });
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toContain("name");
+        expect((await User.findById(customer._id)).name).toBe("Test Customer");
     });
 });
 

@@ -2,6 +2,8 @@ import { getUserByEmail, getUserByUsername } from "../models/users.js";
 import { hasRole, verifyPassword } from "../middleware/authentication.js";
 
 const isApiRequest = (req) => req.path.startsWith('/api/');
+const isRequestObject = (value) =>
+    value !== null && typeof value === 'object' && !Array.isArray(value);
 
 const sendLoginError = (req, res, status, error) => {
     if (isApiRequest(req)) {
@@ -32,14 +34,49 @@ export async function login(req, res) {
         });
     }
 
-    const identifierValue = req.body?.identifier ?? req.body?.email ?? req.body?.username;
+    const body = req.body;
+    const identifierFields = ['identifier', 'email', 'username'].filter(
+        (field) => body?.[field] !== undefined
+    );
+    const allowedFields = ['identifier', 'email', 'username', 'password'];
+    const unknownFields = isRequestObject(body)
+        ? Object.keys(body).filter((field) => !allowedFields.includes(field))
+        : [];
+    const invalidFields = isRequestObject(body)
+        ? allowedFields.filter(
+            (field) => body[field] !== undefined && typeof body[field] !== 'string'
+        )
+        : [];
+    if (
+        !isRequestObject(body) ||
+        unknownFields.length > 0 ||
+        invalidFields.length > 0 ||
+        identifierFields.length !== 1
+    ) {
+        const errors = [];
+        if (!isRequestObject(body)) {
+            errors.push('Login data must be an object');
+        }
+        if (unknownFields.length > 0) {
+            errors.push(`Unknown login fields: ${unknownFields.join(', ')}`);
+        }
+        if (invalidFields.length > 0) {
+            errors.push(`Login fields must be strings: ${invalidFields.join(', ')}`);
+        }
+        if (identifierFields.length !== 1) {
+            errors.push('Provide exactly one of identifier, email, or username');
+        }
+        return sendLoginError(req, res, 400, errors.join('. '));
+    }
+
+    const identifierValue = body[identifierFields[0]];
     let identifier = '';
     if (typeof identifierValue === 'string') {
         identifier = identifierValue.trim().toLowerCase();
     }
     let password = '';
-    if (typeof req.body?.password === 'string') {
-        password = req.body.password;
+    if (typeof body.password === 'string') {
+        password = body.password;
     }
     if (!identifier || !password) {
         return sendLoginError(req, res, 400, 'Username/email and password are required');

@@ -28,4 +28,21 @@ describe("OpenAPI documentation", () => {
         expect(bodySchema.required).toContain("schedules");
         expect(bodySchema.properties.schedules.minItems).toBe(1);
     });
+
+    test("documents station browsing and protected station management", () => {
+        expect(swaggerSpec.paths["/api/stations"].get).toBeDefined();
+        expect(swaggerSpec.paths["/api/stations"].post.security)
+            .toContainEqual({ SessionCookieAuth: [] });
+        expect(swaggerSpec.paths["/api/stations/{id}"].get.summary)
+            .toContain("ID or name");
+        expect(swaggerSpec.paths["/api/stations/{id}"].put.security)
+            .toContainEqual({ SessionCookieAuth: [] });
+        expect(swaggerSpec.paths["/api/stations/{id}"].delete.security)
+            .toContainEqual({ SessionCookieAuth: [] });
+        expect(swaggerSpec.paths["/api/stations/filters"].get).toBeDefined();
+        expect(swaggerSpec.paths["/api/admin/stations"].get.security)
+            .toContainEqual({ SessionCookieAuth: [] });
+        expect(swaggerSpec.paths["/api/admin/stations"].get.description)
+            .toContain("cannot be modified or deleted");
+    });
 });

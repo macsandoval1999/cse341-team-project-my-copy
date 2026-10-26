@@ -19,7 +19,15 @@ import {
     updateScheduleById,
     validateMonth,
 } from "../controllers/schedules.js";
-import { getAllStations, getStationById } from "../controllers/stations.js";
+import {
+    createStationRecord,
+    deleteStationRecord,
+    getAdminStations,
+    getAllStations,
+    getStationById,
+    getStationFilterOptions,
+    updateStationRecord,
+} from "../controllers/stations.js";
 import {
     createTrip,
     getTripById,
@@ -66,7 +74,7 @@ const router = Router();
  *     tags:
  *       - Authentication
  *     summary: Log in a user
- *     description: Authenticates a guest. Requests with an active session are rejected; log out before switching accounts.
+ *     description: Authenticates a guest. Provide exactly one of identifier, email, or username plus password; unknown fields are rejected. Requests with an active session are rejected; log out before switching accounts.
  *     security:
  *       - {}
  *       - SessionCookieAuth: []
@@ -77,6 +85,7 @@ const router = Router();
  *           schema:
  *             oneOf:
  *               - type: object
+ *                 additionalProperties: false
  *                 properties:
  *                   email:
  *                     type: string
@@ -88,6 +97,18 @@ const router = Router();
  *                     example: mysecurepassword
  *                 required: [email, password]
  *               - type: object
+ *                 additionalProperties: false
+ *                 properties:
+ *                   identifier:
+ *                     type: string
+ *                     example: hector
+ *                   password:
+ *                     type: string
+ *                     format: password
+ *                     example: mysecurepassword
+ *                 required: [identifier, password]
+ *               - type: object
+ *                 additionalProperties: false
  *                 properties:
  *                   username:
  *                     type: string
@@ -141,7 +162,7 @@ router.post("/api/auth/logout", logout);
  *     tags:
  *       - Authentication
  *     summary: Register a new user
- *     description: Guests and admins may create a customer account. Names are title-cased and usernames are stored lowercase. Signed-in customers are not allowed to register another account.
+ *     description: Guests and admins may create a customer account. Names are title-cased and usernames are stored lowercase. Unknown request fields are rejected. Signed-in customers are not allowed to register another account.
  *     security:
  *       - {}
  *       - SessionCookieAuth: []
@@ -151,6 +172,7 @@ router.post("/api/auth/logout", logout);
  *         application/json:
  *           schema:
  *             type: object
+ *             additionalProperties: false
  *             properties:
  *               name:
  *                 type: string
@@ -331,6 +353,7 @@ router.get("/api/users/:id", requireApiSelfOrAdmin, getUserById);
  *         application/json:
  *           schema:
  *             type: object
+ *             additionalProperties: false
  *             required: [name, email]
  *             properties:
  *               name:
@@ -408,6 +431,7 @@ router.delete("/api/users/:id", requireApiSelfOrAdmin, deleteUser);
  *         application/json:
  *           schema:
  *             type: object
+ *             additionalProperties: false
  *             required: [name, username, email, password]
  *             properties:
  *               name:
@@ -1113,12 +1137,109 @@ router.get("/api/stations", getAllStations);
 
 /**
  * @openapi
+ * /api/stations/filters:
+ *   get:
+ *     tags: [Stations]
+ *     summary: Get station filter options
+ *     responses:
+ *       '200': { description: Available regions, prefectures, and facilities. }
+ *       '500': { description: Internal server error. }
+ */
+router.get("/api/stations/filters", getStationFilterOptions);
+
+/**
+ * @openapi
+ * /api/admin/stations:
+ *   get:
+ *     tags: [Stations]
+ *     summary: Get stations with trip usage indicators (Admin Only)
+ *     description: Returns the filtered, paginated stations and an inUse flag. Stations referenced by a trip cannot be modified or deleted.
+ *     security:
+ *       - SessionCookieAuth: []
+ *     parameters:
+ *       - name: page
+ *         in: query
+ *         schema: { type: integer, default: 1, minimum: 1 }
+ *       - name: limit
+ *         in: query
+ *         schema: { type: integer, default: 10, minimum: 1, maximum: 50 }
+ *       - name: q
+ *         in: query
+ *         schema: { type: string, minLength: 1, maxLength: 100 }
+ *       - name: region
+ *         in: query
+ *         schema: { type: string }
+ *       - name: prefecture
+ *         in: query
+ *         schema: { type: string }
+ *       - name: facility
+ *         in: query
+ *         schema: { type: string }
+ *       - name: sort
+ *         in: query
+ *         schema: { type: string, enum: [id, name, prefecture, region], default: id }
+ *       - name: order
+ *         in: query
+ *         schema: { type: string, enum: [asc, desc], default: asc }
+ *     responses:
+ *       '200': { description: Paginated station records with inUse flags. }
+ *       '400': { description: Invalid pagination, sort, or filter value. }
+ *       '401': { description: Authentication required. }
+ *       '403': { description: Administrator role required. }
+ *       '500': { description: Internal server error. }
+ */
+router.get(
+    "/api/admin/stations",
+    requireApiLogin,
+    requireApiRole("admin"),
+    getAdminStations
+);
+
+/**
+ * @openapi
+ * /api/stations:
+ *   post:
+ *     tags: [Stations]
+ *     summary: Create a station (Admin Only)
+ *     security:
+ *       - SessionCookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [id, name]
+ *             properties:
+ *               id: { type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' }
+ *               name: { type: string, minLength: 1, maxLength: 100 }
+ *               prefecture: { type: string, maxLength: 100 }
+ *               region: { type: string, maxLength: 100 }
+ *               facilities: { type: array, maxItems: 30, items: { type: string, maxLength: 60 } }
+ *               description: { type: string, maxLength: 500 }
+ *     responses:
+ *       '201': { description: Station created. }
+ *       '400': { description: Invalid station information. }
+ *       '401': { description: Authentication required. }
+ *       '403': { description: Administrator role required. }
+ *       '409': { description: Station ID already exists. }
+ *       '500': { description: Internal server error. }
+ */
+router.post(
+    "/api/stations",
+    requireApiLogin,
+    requireApiRole("admin"),
+    createStationRecord
+);
+
+/**
+ * @openapi
  * /api/stations/{id}:
  *   get:
  *     tags:
  *       - Stations
- *     summary: Get a station by ID
- *     description: Returns one station matching the requested ID
+ *     summary: Get a station by ID or name
+ *     description: Returns one station matching the requested ID or exact display name, case-insensitively.
  *     parameters:
  *       - name: id
  *         in: path
@@ -1136,6 +1257,73 @@ router.get("/api/stations", getAllStations);
  *         description: Internal server error
  */
 router.get("/api/stations/:id", getStationById);
+
+/**
+ * @openapi
+ * /api/stations/{id}:
+ *   put:
+ *     tags: [Stations]
+ *     summary: Update a station (Admin Only)
+ *     description: Updates station details. IDs are immutable, and a station referenced by any trip cannot be modified.
+ *     security:
+ *       - SessionCookieAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             minProperties: 1
+ *             properties:
+ *               name: { type: string, minLength: 1, maxLength: 100 }
+ *               prefecture: { type: string, maxLength: 100 }
+ *               region: { type: string, maxLength: 100 }
+ *               facilities: { type: array, maxItems: 30, items: { type: string, maxLength: 60 } }
+ *               description: { type: string, maxLength: 500 }
+ *     responses:
+ *       '200': { description: Station updated. }
+ *       '400': { description: Invalid station information or attempted ID change. }
+ *       '401': { description: Authentication required. }
+ *       '403': { description: Administrator role required. }
+ *       '404': { description: Station not found. }
+ *       '409': { description: Station is used by a trip and cannot be modified. }
+ *       '500': { description: Internal server error. }
+ *   delete:
+ *     tags: [Stations]
+ *     summary: Delete a station (Admin Only)
+ *     description: Deletes a station only when no trip references its ID or display name.
+ *     security:
+ *       - SessionCookieAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       '204': { description: Station deleted. }
+ *       '401': { description: Authentication required. }
+ *       '403': { description: Administrator role required. }
+ *       '404': { description: Station not found. }
+ *       '409': { description: Station is used by a trip and cannot be deleted. }
+ *       '500': { description: Internal server error. }
+ */
+router.put(
+    "/api/stations/:id",
+    requireApiLogin,
+    requireApiRole("admin"),
+    updateStationRecord
+);
+router.delete(
+    "/api/stations/:id",
+    requireApiLogin,
+    requireApiRole("admin"),
+    deleteStationRecord
+);
 
 /**
  * @openapi
@@ -1621,6 +1809,7 @@ router.delete(
  *         application/json:
  *           schema:
  *             type: object
+ *             additionalProperties: false
  *             required: [scheduleId, tripId, ticketClass, selectedDay, passengers]
  *             properties:
  *               scheduleId:
@@ -1643,6 +1832,7 @@ router.delete(
  *                 maxItems: 8
  *                 items:
  *                   type: object
+ *                   additionalProperties: false
  *                   required: [firstName, lastName, email, phone]
  *                   properties:
  *                     firstName:
@@ -1830,7 +2020,9 @@ router.get(
  *     summary: Update a booking
  *     tags:
  *       - Bookings
- *     description: The booking creator or an admin may edit passenger details or upgrade every seat to a higher ticket class. No payment is processed.
+ *     description: The booking creator or an admin may edit passenger details or upgrade every seat to a higher ticket class. Unknown fields are rejected, and only one update operation may be sent per request. No payment is processed.
+ *     security:
+ *       - SessionCookieAuth: []
  *     parameters:
  *       - name: id
  *         in: path
@@ -1843,12 +2035,16 @@ router.get(
  *           schema:
  *             oneOf:
  *               - type: object
+ *                 additionalProperties: false
  *                 required: [passengers]
  *                 properties:
  *                   passengers:
  *                     type: array
+ *                     minItems: 1
+ *                     maxItems: 8
  *                     items:
  *                       type: object
+ *                       additionalProperties: false
  *                       required: [firstName, lastName, email, phone]
  *                       properties:
  *                         firstName: { type: string }
@@ -1856,6 +2052,7 @@ router.get(
  *                         email: { type: string, format: email }
  *                         phone: { type: string }
  *               - type: object
+ *                 additionalProperties: false
  *                 required: [ticketClass]
  *                 properties:
  *                   ticketClass: { type: string, enum: [premium, first] }

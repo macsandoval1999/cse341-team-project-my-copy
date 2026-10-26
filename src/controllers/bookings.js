@@ -34,6 +34,10 @@ const normalizeString = (value, { lowercase = false } = {}) => {
     }
     return trimmed;
 };
+const isRequestObject = (value) =>
+    value !== null && typeof value === "object" && !Array.isArray(value);
+const getUnknownFields = (body, allowedFields) =>
+    Object.keys(body).filter((field) => !allowedFields.includes(field));
 
 const getAllBookings = async (req, res) => {
     return getPaginatedBookings(req, res);
@@ -160,6 +164,35 @@ const validatePassengerUpdates = (passengers, expectedCount) => {
         return { error: "Passenger count cannot be changed here", status: 400 };
     }
 
+    for (const passenger of passengers) {
+        if (!isRequestObject(passenger)) {
+            return { error: "Passenger details must be objects", status: 400 };
+        }
+        const unknownFields = getUnknownFields(passenger, [
+            "firstName",
+            "lastName",
+            "email",
+            "phone",
+        ]);
+        if (unknownFields.length > 0) {
+            return {
+                error: `Unknown passenger fields: ${unknownFields.join(", ")}`,
+                status: 400,
+            };
+        }
+        const invalidFields = ["firstName", "lastName", "email", "phone"].filter(
+            (field) =>
+                passenger[field] !== undefined &&
+                typeof passenger[field] !== "string"
+        );
+        if (invalidFields.length > 0) {
+            return {
+                error: `Passenger fields must be strings: ${invalidFields.join(", ")}`,
+                status: 400,
+            };
+        }
+    }
+
     const normalizedPassengers = passengers.map((passenger) => ({
         firstName: normalizeString(passenger?.firstName),
         lastName: normalizeString(passenger?.lastName),
@@ -182,9 +215,29 @@ const validatePassengerUpdates = (passengers, expectedCount) => {
 };
 
 const createBookingApi = async (req, res) => {
-    let body = {};
-    if (req.body && typeof req.body === "object") {
-        body = req.body;
+    const body = req.body;
+    if (!isRequestObject(body)) {
+        return res.status(400).json({ error: "Booking details must be an object" });
+    }
+    const unknownFields = getUnknownFields(body, [
+        "scheduleId",
+        "tripId",
+        "selectedDay",
+        "ticketClass",
+        "passengers",
+    ]);
+    if (unknownFields.length > 0) {
+        return res.status(400).json({
+            error: `Unknown booking fields: ${unknownFields.join(", ")}`,
+        });
+    }
+    const invalidFields = ["tripId", "selectedDay", "ticketClass"].filter(
+        (field) => body[field] !== undefined && typeof body[field] !== "string"
+    );
+    if (invalidFields.length > 0) {
+        return res.status(400).json({
+            error: `Booking fields must be strings: ${invalidFields.join(", ")}`,
+        });
     }
     const scheduleId = body.scheduleId;
     const tripId = normalizeString(body.tripId);
@@ -300,14 +353,20 @@ const updateBookingById = async (req, res) => {
             return res.status(403).json({ message: "Forbidden" });
         }
 
-        const hasPassengerUpdate = req.body.passengers !== undefined;
-        const hasUpgradeUpdate =
-            req.body.ticketClass !== undefined || req.body.selectedDay !== undefined;
-        if (hasPassengerUpdate && hasUpgradeUpdate) {
+        if (!isRequestObject(req.body)) {
+            return res.status(400).json({ error: "Booking update must be an object" });
+        }
+        const unknownFields = getUnknownFields(req.body, ["passengers", "ticketClass"]);
+        if (unknownFields.length > 0) {
+            return res.status(400).json({
+                error: `Unknown booking update fields: ${unknownFields.join(", ")}`,
+            });
+        }
+        if (Object.keys(req.body).length !== 1) {
             return res.status(400).json({ error: "Update passenger details or upgrade the booking separately" });
         }
 
-        if (hasPassengerUpdate) {
+        if (req.body.passengers !== undefined) {
             const result = validatePassengerUpdates(
                 req.body.passengers,
                 booking.passengers.length
@@ -322,10 +381,10 @@ const updateBookingById = async (req, res) => {
             return res.status(200).json(updated);
         }
 
-        if (req.body.selectedDay !== undefined) {
-            return res
-                .status(400)
-                .json({ error: "Only ticket upgrades are supported" });
+        if (typeof req.body.ticketClass !== "string") {
+            return res.status(400).json({
+                error: "Ticket class must be a string",
+            });
         }
 
         const result = await createUpgradeQuote(booking, req.body.ticketClass);

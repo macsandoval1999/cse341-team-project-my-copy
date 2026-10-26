@@ -1,7 +1,3 @@
-.users-controls.trips-controls {
-    grid-template-columns: minmax(12rem, 1.7fr) repeat(5, minmax(6.5rem, 1fr)) auto;
-}
-
 .trips-controls :focus-visible,
 .trips-controls button:focus-visible,
 .trips-controls input:focus-visible,
@@ -250,7 +246,7 @@
                 background-color: var(--clr-primary);
                 border-width: 1px;
                 border-style: solid;
-                color: var(--clr-text-alt-primary);
+                color: #20352c;
                 border-radius: var(--radius-md);
                 text-decoration: none;
                 transition: background-color 0.2s ease, box-shadow 0.2s ease;
@@ -334,21 +330,4 @@
 
 .routes-grid .route-card[hidden] {
     display: none;
-}
-
-@media (max-width: 760px) {
-    .users-controls.trips-controls {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .users-controls.trips-controls .users-search-control,
-    .users-controls.trips-controls .users-control-actions {
-        grid-column: 1 / -1;
-    }
-}
-
-@media (max-width: 480px) {
-    .users-controls.trips-controls {
-        grid-template-columns: 1fr;
-    }
 }

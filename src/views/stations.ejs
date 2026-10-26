@@ -1,0 +1,118 @@
+<%- include('./partials/header') %>
+
+<section class="stations-page">
+    <div class="stations-heading <%= isAdmin ? 'admin-trips-heading trains-hero' : '' %>">
+        <div>
+            <h1><%= isAdmin ? "Manage Stations" : "Explore Stations" %></h1>
+            <p><%= isAdmin
+                ? "Add, review, and update station information across the rail network."
+                : "Browse station locations, facilities, and regional information." %></p>
+        </div>
+        <% if (isAdmin) { %>
+            <a class="admin-trips-back" href="/admin">&larr; Back to Admin Dashboard</a>
+        <% } %>
+    </div>
+
+    <% if (isAdmin) { %>
+        <details class="station-create">
+            <summary>
+                <span class="trip-create-icon" aria-hidden="true">+</span>
+                <span><strong>Add a station</strong><small>Enter the station details and facilities.</small></span>
+            </summary>
+            <form id="station-create-form" class="station-form">
+                <label><span>Station ID</span><input name="id" required maxlength="100" pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="kyoto-central"></label>
+                <label><span>Station name</span><input name="name" required maxlength="100"></label>
+                <label><span>Prefecture</span><input name="prefecture" maxlength="100"></label>
+                <label><span>Region</span><input name="region" maxlength="100"></label>
+                <label class="station-form-wide"><span>Facilities (comma-separated)</span><input name="facilities" maxlength="500" placeholder="restaurant, restroom, lockers"></label>
+                <label class="station-form-wide"><span>Description</span><textarea name="description" rows="3" maxlength="500"></textarea></label>
+                <div class="station-form-actions"><button type="submit">Add station</button></div>
+            </form>
+            <p class="station-feedback" id="station-create-feedback" role="alert" hidden></p>
+        </details>
+    <% } %>
+
+    <section class="station-catalog" aria-labelledby="station-catalog-title">
+        <h2 id="station-catalog-title">Stations</h2>
+        <form class="users-controls station-filters" id="station-filters" role="search">
+            <label class="users-search-control" for="station-search">
+                <span>Search stations</span>
+                <input id="station-search" type="search" maxlength="100" placeholder="Name, ID, or facility">
+            </label>
+            <label for="station-region"><span>Region</span><select id="station-region"><option value="">All regions</option></select></label>
+            <label for="station-prefecture"><span>Prefecture</span><select id="station-prefecture"><option value="">All prefectures</option></select></label>
+            <label for="station-facility"><span>Facility</span><select id="station-facility"><option value="">All facilities</option></select></label>
+            <label for="station-sort"><span>Sort by</span>
+                <select id="station-sort">
+                    <option value="name">Name</option>
+                    <option value="id">Station ID</option>
+                    <option value="prefecture">Prefecture</option>
+                    <option value="region">Region</option>
+                </select>
+            </label>
+            <label for="station-order"><span>Order</span>
+                <select id="station-order"><option value="asc">Ascending</option><option value="desc">Descending</option></select>
+            </label>
+            <div class="users-control-actions">
+                <button type="submit">Search</button>
+                <button type="button" id="station-reset">Reset</button>
+            </div>
+        </form>
+        <p id="station-results-count" class="booking-results-count" aria-live="polite"></p>
+        <p class="station-state" id="station-state" role="status" aria-live="polite">Loading stations...</p>
+        <div class="station-grid" id="station-list"></div>
+        <nav class="users-pagination" id="station-pagination" aria-label="Station pages" hidden>
+            <button type="button" id="station-previous">Previous</button>
+            <div class="users-page-links" id="station-page-links" aria-label="Page numbers"></div>
+            <button type="button" id="station-next">Next</button>
+        </nav>
+    </section>
+</section>
+
+<template id="station-card-template">
+    <article class="station-card">
+        <header class="station-card-heading">
+            <div>
+                <h3 data-field="name"></h3>
+                <p data-field="location"></p>
+            </div>
+            <span class="station-region" data-field="region"></span>
+        </header>
+        <p class="station-description" data-field="description"></p>
+        <section class="station-facilities">
+            <h4>Facilities</h4>
+            <div class="station-facility-list" data-field="facilities"></div>
+        </section>
+        <% if (isAdmin) { %>
+            <p class="station-use-notice" data-field="use-notice" hidden>
+                This station is used by a trip. It cannot be edited or deleted.
+            </p>
+            <div class="station-card-actions">
+                <button type="button" data-action="edit">Edit station</button>
+                <button type="button" data-action="delete" class="station-delete">Delete</button>
+            </div>
+            <p class="station-action-feedback" data-field="action-feedback" role="alert" hidden></p>
+            <form class="station-edit-form" data-field="edit-form" hidden>
+                <p class="station-edit-note">Station IDs are permanent. A station name used by a trip cannot be changed.</p>
+                <label><span>Station ID</span><input name="id" data-field="id" readonly></label>
+                <label><span>Station name</span><input name="name" data-field="name-input" required maxlength="100"></label>
+                <label><span>Prefecture</span><input name="prefecture" data-field="prefecture-input" maxlength="100"></label>
+                <label><span>Region</span><input name="region" data-field="region-input" maxlength="100"></label>
+                <label class="station-form-wide"><span>Facilities (comma-separated)</span><input name="facilities" data-field="facilities-input" maxlength="500"></label>
+                <label class="station-form-wide"><span>Description</span><textarea name="description" data-field="description-input" rows="3" maxlength="500"></textarea></label>
+                <p class="station-feedback station-edit-feedback" role="alert" hidden></p>
+                <div class="station-form-actions">
+                    <button type="button" data-action="cancel">Cancel</button>
+                    <button type="submit">Save changes</button>
+                </div>
+            </form>
+        <% } %>
+    </article>
+</template>
+
+<script>
+    window.stationPageConfig = { isAdmin: <%- JSON.stringify(isAdmin) %> };
+</script>
+<script src="/js/stations.js" defer></script>
+
+<%- include('./partials/footer') %>

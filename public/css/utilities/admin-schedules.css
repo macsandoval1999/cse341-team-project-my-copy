@@ -300,7 +300,6 @@
 }
 
 .schedule-admin-controls {
-    grid-template-columns: minmax(12rem, 1.7fr) repeat(5, minmax(7rem, 1fr)) auto;
     margin-top: var(--space-md);
 }
 
@@ -382,9 +381,21 @@
     margin: 0;
 }
 
+.schedule-card-heading a {
+    color: #123f63;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+}
+
+.schedule-card-heading a:hover,
+.schedule-card-heading a:focus-visible {
+    color: #092d49;
+}
+
 .schedule-card-heading p {
     margin-top: var(--space-xs);
-    color: var(--clr-text-secondary);
+    color: var(--clr-text-primary);
     font-size: var(--font-size-sm);
 }
 
@@ -441,15 +452,6 @@
 }
 
 @media (max-width: 900px) {
-    .schedule-admin-controls {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-
-    .schedule-admin-controls .users-search-control,
-    .schedule-admin-controls .users-control-actions {
-        grid-column: 1 / -1;
-    }
-
     .schedule-card-editor,
     .schedule-card-summary {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -459,17 +461,14 @@
 @media (max-width: 600px) {
     #schedule-create-form,
     .schedule-card-editor,
-    .schedule-card-summary,
-    .schedule-admin-controls {
+    .schedule-card-summary {
         grid-template-columns: 1fr;
     }
 
     .schedule-days,
     .schedule-card-heading,
     .schedule-card-days,
-    .schedule-card-editor [data-field="booking-warning"],
-    .schedule-admin-controls .users-search-control,
-    .schedule-admin-controls .users-control-actions {
+    .schedule-card-editor [data-field="booking-warning"] {
         grid-column: auto;
     }
 

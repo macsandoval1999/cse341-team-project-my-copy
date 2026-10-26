@@ -1,37 +1,3 @@
-.users-controls.trains-controls,
-.users-controls.admin-trips-controls {
-    grid-template-columns: minmax(12rem, 1.7fr) repeat(4, minmax(6.5rem, 1fr)) auto;
-}
-
-.users-controls.admin-trips-controls {
-    grid-template-columns: minmax(12rem, 1.7fr) repeat(6, minmax(5.75rem, 1fr)) auto;
-}
-
-.users-controls.admin-trips-controls .users-search-control {
-    grid-column: 1;
-}
-
-@media (max-width: 760px) {
-    .users-controls.trains-controls,
-    .users-controls.admin-trips-controls {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-
-    .users-controls.trains-controls .users-search-control,
-    .users-controls.trains-controls .users-control-actions,
-    .users-controls.admin-trips-controls .users-search-control,
-    .users-controls.admin-trips-controls .users-control-actions {
-        grid-column: 1 / -1;
-    }
-}
-
-@media (max-width: 480px) {
-    .users-controls.trains-controls,
-    .users-controls.admin-trips-controls {
-        grid-template-columns: 1fr;
-    }
-}
-
 .trains-hero {
     padding: var(--space-2xl) var(--space-lg);
     border-radius: var(--radius-lg);
@@ -144,7 +110,7 @@
             }
 
             .train-operator {
-                color: var(--clr-primary);
+                color: #3d6b51;
                 letter-spacing: 0.02em;
             }
 
