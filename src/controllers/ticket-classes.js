@@ -1,7 +1,12 @@
 import {
-    getAllTicketClasses as findAllTicketClasses,
-    getTicketClassesForDay as findTicketClassesForDay
+    getPaginatedTicketClasses as findPaginatedTicketClasses,
 } from '../models/ticket-classes.js';
+import {
+    createListResponse,
+    escapeRegExp,
+    parseListQuery,
+    parseOptionalFilters,
+} from "../utils/list-query.js";
 
 const validDays = new Set([
     'monday',
@@ -15,36 +20,79 @@ const validDays = new Set([
 
 export const getAllTicketClasses = async (req, res) => {
     try {
-        const ticketClasses = await findAllTicketClasses();
-        return res.status(200).json(ticketClasses);
+        return getTicketClassList(req, res);
     } catch (error) {
+        console.error("Error fetching ticket classes:", error);
         return res.status(500).json({ error: 'Internal Server Error' });
     }
 };
 
 export const getTicketClassesForDay = async (req, res) => {
+    return getTicketClassList(req, res);
+};
+
+const getTicketClassList = async (req, res) => {
     try {
-        const { day } = req.query;
-        if (!day) {
-            return res.status(400).json({ error: 'Day query parameter is required' });
+        const options = parseListQuery(
+            req.query,
+            ["class", "name", "priceMultiplier"],
+            "class"
+        );
+        if (options.errors.length > 0) {
+            return res.status(400).json({ errors: options.errors });
         }
 
-        if (!validDays.has(day.trim().toLowerCase())) {
+        const filters = parseOptionalFilters(req.query, {
+            day: {},
+            q: { maxLength: 100 },
+            class: {},
+        });
+        if (filters.errors.length > 0) {
+            return res.status(400).json({ errors: filters.errors });
+        }
+        const { day, q, class: ticketClass } = filters.values;
+        if (day.value && !validDays.has(day.value.toLowerCase())) {
             return res.status(400).json({
-                error: 'Day must be a valid weekday, such as Monday',
+                errors: [{ field: "day", message: "day must be a valid weekday." }],
             });
         }
 
-        const ticketClasses = await findTicketClassesForDay(day);
-
-        if (ticketClasses.length === 0) {
-            return res.status(404).json({
-                error: 'No ticket classes are available for that day',
-            });
+        const filter = {};
+        if (day.value) {
+            filter.availableDays = {
+                $regex: new RegExp(`^${escapeRegExp(day.value)}$`, "i"),
+            };
+        }
+        if (ticketClass.value) {
+            filter.class = {
+                $regex: `^${escapeRegExp(ticketClass.value)}$`,
+                $options: "i",
+            };
+        }
+        if (q.value) {
+            const pattern = escapeRegExp(q.value);
+            filter.$or = [
+                { name: { $regex: pattern, $options: "i" } },
+                { description: { $regex: pattern, $options: "i" } },
+            ];
         }
 
-        return res.status(200).json(ticketClasses);
+        const { ticketClasses, totalItems } = await findPaginatedTicketClasses({
+            filter,
+            ...options,
+        });
+        return res.status(200).json(createListResponse({
+            data: ticketClasses,
+            ...options,
+            totalItems,
+            query: {
+                day: day.value?.toLowerCase(),
+                class: ticketClass.value,
+                q: q.value,
+            },
+        }));
     } catch (error) {
+        console.error("Error fetching ticket classes:", error);
         return res.status(500).json({ error: 'Internal Server Error' });
     }
 };

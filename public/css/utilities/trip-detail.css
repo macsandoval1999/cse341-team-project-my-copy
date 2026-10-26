@@ -2,6 +2,16 @@ article.route-detail {
     max-width: var(--content-max-width);
     margin: 0 auto;
 
+    .booking-availability-notice {
+        margin: 0 0 var(--space-lg);
+        padding: var(--space-md) var(--space-lg);
+        background-color: var(--clr-autumn);
+        border: 1px solid var(--clr-autumn-text);
+        border-radius: var(--radius-md);
+        color: var(--clr-text-primary);
+        font-weight: 600;
+    }
+
     .route-header {
         display: flex;
         flex-direction: column;
@@ -131,6 +141,102 @@ article.route-detail {
                     &.season-winter {
                         color: var(--clr-winter-text);
                     }
+                }
+
+                .train-info {
+                    display: flex;
+                    align-items: center;
+                    gap: var(--space-md);
+                    min-height: 8rem;
+                    padding: var(--space-sm);
+                    background: linear-gradient(135deg, var(--clr-surface-alt), var(--clr-surface));
+                    border: 1px solid var(--clr-border);
+                    border-radius: var(--radius-md);
+                    text-decoration: none;
+                    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+
+                    &:hover,
+                    &:focus-visible {
+                        border-color: var(--clr-primary-light);
+                        box-shadow: var(--shadow-md);
+                        transform: translateY(-1px);
+                    }
+                }
+
+                .train-info-unavailable {
+                    cursor: default;
+                }
+
+                .train-visual {
+                    position: relative;
+                    display: grid;
+                    place-items: center;
+                    width: 8.5rem;
+                    height: 6.5rem;
+                    flex: 0 0 auto;
+                    overflow: hidden;
+                    background-color: var(--clr-primary-pale);
+                    border-radius: var(--radius-sm);
+                }
+
+                .train-info-image {
+                    position: absolute;
+                    inset: 0;
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+
+                .train-info-placeholder {
+                    display: none;
+                    width: 3.8rem;
+                    color: var(--clr-primary);
+
+                    svg {
+                        display: block;
+                        width: 100%;
+                        fill: none;
+                        stroke: currentColor;
+                        stroke-linecap: round;
+                        stroke-linejoin: round;
+                        stroke-width: 2;
+                    }
+                }
+
+                .train-visual.is-image-missing .train-info-placeholder {
+                    display: block;
+                }
+
+                .train-info-copy {
+                    display: flex;
+                    min-width: 0;
+                    flex: 1;
+                    flex-direction: column;
+                    gap: var(--space-xs);
+                }
+
+                .train-info-name {
+                    overflow-wrap: anywhere;
+                    font-size: var(--font-size-md);
+                    font-weight: 600;
+                    line-height: var(--line-height-sm);
+                }
+
+                .train-info-action {
+                    color: var(--clr-text-secondary);
+                    font-size: var(--font-size-sm);
+                    font-weight: 500;
+                }
+
+                .train-info-arrow {
+                    align-self: flex-start;
+                    color: var(--clr-primary);
+                    font-size: var(--font-size-lg);
+                    line-height: 1;
+                }
+
+                .train-info-unavailable .train-info-action {
+                    color: var(--clr-text-muted);
                 }
             }
         }
@@ -302,6 +408,15 @@ article.route-detail {
                             background-color: var(--clr-accent);
                             box-shadow: var(--shadow-md);
                         }
+
+                        &.book-btn-unavailable,
+                        &:disabled {
+                            background-color: var(--clr-surface-alt);
+                            border: 1px solid var(--clr-border);
+                            color: var(--clr-text-muted);
+                            cursor: not-allowed;
+                            box-shadow: none;
+                        }
                     }
                 }
             }
@@ -385,6 +500,10 @@ article.route-detail {
 
             .info-grid {
                 --info-columns: 4;
+
+                .train-info-item {
+                    flex-basis: calc((100% - var(--info-gap)) / 2);
+                }
             }
 
             .route-stations {

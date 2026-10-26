@@ -11,6 +11,12 @@ const scheduleSchema = new mongoose.Schema(
             type: String,
             required: true,
             trim: true,
+            immutable: true,
+            validate: {
+                validator: async (value) =>
+                    Boolean(await mongoose.model("Trip").exists({ id: value })),
+                message: (props) => `Trip '${props.value}' does not exist`,
+            },
         },
         departureTime: {
             type: String,

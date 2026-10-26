@@ -37,6 +37,10 @@
             box-shadow: var(--shadow-lg);
         }
     }
+
+    &.admin-dashboard-heading {
+        text-align: left;
+    }
 }
 
 .features {

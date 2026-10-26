@@ -2,32 +2,75 @@
 
 <section class="trains-hero">
     <h1><%- title %></h1>
+    <p class="page-description">Explore scenic rail journeys across Japan and filter by region, season, and availability.</p>
 </section>
 
-<div id="filters">
-    Search by Region:
-    <select id="region-filter">
-        <option value="all">All Regions</option>
-        <% regions.forEach((region) => { %>
-            <option value="<%= region %>" <%= query.region === region ? 'selected' : '' %>><%= region.charAt(0).toUpperCase() + region.slice(1) %></option>
-        <% }); %>
-    </select>
-
-    Search by Season:
-    <select id="season-filter">
-        <option value="all">Any Season</option>
-        <% seasons.forEach((season) => { %>
-            <option value="<%= season %>" <%= query.season === season ? 'selected' : '' %>><%= season.charAt(0).toUpperCase() + season.slice(1) %></option>
-        <% }); %>
-    </select>
-</div>
+<form class="users-controls trips-controls" id="filters" role="search">
+    <label class="users-search-control" for="trip-search">
+        <span>Search trips</span>
+        <input id="trip-search" name="search" type="search" maxlength="100" placeholder="Name or description">
+    </label>
+    <label for="region-filter">
+        <span>Region</span>
+        <select id="region-filter" name="region">
+            <option value="all">All regions</option>
+            <% regions.forEach((region) => { %>
+                <option value="<%= region %>" <%= query.region === region ? 'selected' : '' %>><%= region.charAt(0).toUpperCase() + region.slice(1) %></option>
+            <% }); %>
+        </select>
+    </label>
+    <label for="season-filter">
+        <span>Season</span>
+        <select id="season-filter" name="season">
+            <option value="all">Any season</option>
+            <% seasons.forEach((season) => { %>
+                <option value="<%= season %>" <%= query.season === season ? 'selected' : '' %>><%= season.charAt(0).toUpperCase() + season.slice(1) %></option>
+            <% }); %>
+        </select>
+    </label>
+    <label for="availability-filter">
+        <span>Availability</span>
+        <select id="availability-filter" name="availability">
+            <option value="all">All</option>
+            <option value="available">Available</option>
+            <option value="unavailable">Unavailable</option>
+        </select>
+    </label>
+    <label for="trip-sort">
+        <span>Sort by</span>
+        <select id="trip-sort" name="sort">
+            <option value="name">Name</option>
+            <option value="region">Region</option>
+            <option value="startStation">Start station</option>
+            <option value="endStation">End station</option>
+            <option value="distance">Distance</option>
+            <option value="bestSeason">Best season</option>
+        </select>
+    </label>
+    <label for="trip-order">
+        <span>Order</span>
+        <select id="trip-order" name="order">
+            <option value="asc">Ascending</option>
+            <option value="desc">Descending</option>
+        </select>
+    </label>
+    <div class="users-control-actions">
+        <button type="submit">Search</button>
+        <button type="button" id="trips-reset">Reset</button>
+    </div>
+</form>
+<p class="users-results-count" id="trips-results-count" aria-live="polite"></p>
 
 <!--below generates the trip card info dynamically-->
 <div id="trips-list" class="routes-grid">
     <p>Loading trips...</p>
 </div>
 
-<nav id="pagination"></nav>
+<nav id="pagination" class="users-pagination" aria-label="Trip pages" hidden>
+    <button type="button" id="trips-previous" aria-label="Previous page">Previous</button>
+    <div class="users-page-links" id="trips-page-links" aria-label="Page numbers"></div>
+    <button type="button" id="trips-next" aria-label="Next page">Next</button>
+</nav>
 
 <template id="trip-card-template">
     <div class="route-card">
@@ -77,7 +120,7 @@
         </div>
 
         <div class="route-actions">
-            <a href="" class="view-details-btn"> View Details &amp; Book → </a>
+            <a href="" class="view-details-btn">View Details &amp; Book →</a>
         </div>
     </div>
 </template>

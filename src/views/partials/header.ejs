@@ -4,9 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>
-        <%= title %>
-    </title>
+    <title>Kizuna Rail | <%= title %></title>
     <link rel="stylesheet" href="/css/main.css">
     <script src="/js/main.js"></script>
     <% if (NODE_ENV.includes('dev')) { %>
@@ -18,7 +16,10 @@
     <header class="content-grid">
         <div class="content">
             <div class="logo">
-                <a href="/"><img src="/images/logo-with-text.png" alt="Kizuna Rail Logo"></a>
+                <a class="brand-link" href="/">
+                    <img src="/images/logo-with-text.png" alt="">
+                    <span class="brand-name">Kizuna Rail</span>
+                </a>
             </div>
             <nav>
                 <input id="mobile-menu-toggle" type="checkbox">

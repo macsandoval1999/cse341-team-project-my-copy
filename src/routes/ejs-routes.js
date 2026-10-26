@@ -18,6 +18,7 @@ import {
 } from "../controllers/bookings.js";
 import { trainsPage, trainDetailsPage, trainsAdminPage } from "../controllers/trains.js";
 import { getTripsList, getTripDetails } from "../controllers/trips.js";
+import { schedulesAdminPage } from "../controllers/schedules.js";
 
 import { accountPage, register } from "../controllers/users.js";
 import { login, logout } from "../controllers/login.js";
@@ -77,6 +78,7 @@ router.get("/account-user", requirePageLogin, accountPage);
 router.get("/admin", requirePageRole("admin"), adminDashboardPage);
 router.get("/admin/users", requirePageLogin, adminUsersPage);
 router.get("/trips-admin", requirePageLogin, requirePageRole("admin"), adminTripPage);
+router.get("/schedules-admin", requirePageLogin, requirePageRole("admin"), schedulesAdminPage);
 router.get("/trains-admin", requirePageLogin, requirePageRole("admin"), trainsAdminPage);
 
 // The admin bookings page can manage all bookings.

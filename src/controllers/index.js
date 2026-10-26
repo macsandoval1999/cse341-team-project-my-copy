@@ -38,9 +38,15 @@ const adminDashboardPage = (req, res) => {
 
 const adminUsersPage = (req, res) => {
     const isAdmin = res.locals.isAdmin;
+    let title = "Your Account";
+    let usersEndpoint = `/api/users/${req.user._id}`;
+    if (isAdmin) {
+        title = "Admin Users";
+        usersEndpoint = "/api/users";
+    }
     res.render("users", {
-        title: isAdmin ? "Admin Users" : "Your Account",
-        usersEndpoint: isAdmin ? "/api/users" : `/api/users/${req.user._id}`,
+        title,
+        usersEndpoint,
         isAdmin,
         isAdminList: isAdmin,
     });

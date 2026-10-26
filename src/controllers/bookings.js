@@ -9,23 +9,34 @@ import {
     getPaginatedBookings as findPaginatedBookings
 } from "../models/bookings.js";
 import { getScheduleById as findScheduleById } from "../models/schedules.js";
-import { getTripById as findTripById } from "../models/trips.js";
+import {
+    getTripById as findTripById,
+    getTripAvailability,
+} from "../models/trips.js";
 import { getAllTicketClasses } from "../models/ticket-classes.js";
 import { getUserById as findUserById } from "../models/users.js";
-import { generateConfirmationCode } from "../includes/helpers.js";
+import { generateConfirmationCode } from "../utils/helpers.js";
+import {
+    createListResponse,
+    escapeRegExp,
+    parseListQuery,
+    parseOptionalFilters,
+} from "../utils/list-query.js";
+
+const normalizeString = (value, { lowercase = false } = {}) => {
+    if (typeof value !== "string") {
+        return "";
+    }
+
+    const trimmed = value.trim();
+    if (lowercase) {
+        return trimmed.toLowerCase();
+    }
+    return trimmed;
+};
 
 const getAllBookings = async (req, res) => {
-    try {
-        const isAdmin = req.user?.role?.name === "admin";
-        const bookings = isAdmin
-            ? await findAllBookings()
-            : await findBookingsForUser(req.user._id, req.user.email);
-
-        return res.status(200).json(bookings);
-    } catch (error) {
-        console.error("Error fetching bookings:", error);
-        return res.status(500).json({ error: "Failed to fetch Bookings" });
-    }
+    return getPaginatedBookings(req, res);
 };
 
 const getBookingsByUserId = async (req, res) => {
@@ -36,12 +47,14 @@ const getBookingsByUserId = async (req, res) => {
             return res.status(404).json({ error: "User not found" });
         }
 
-        const bookings = await findBookingsForUser(user._id, user.email);
-        if (bookings.length === 0) {
-            return res.status(404).json({ error: "User has no bookings" });
+        const result = await getBookingList(req, {
+            userId: user._id,
+            email: user.email,
+        });
+        if (result.error) {
+            return res.status(400).json({ errors: result.error });
         }
-
-        return res.status(200).json(bookings);
+        return res.status(200).json(result.response);
     } catch (error) {
         if (error.name === "CastError") {
             return res.status(400).json({ error: "Invalid user ID" });
@@ -148,19 +161,10 @@ const validatePassengerUpdates = (passengers, expectedCount) => {
     }
 
     const normalizedPassengers = passengers.map((passenger) => ({
-        firstName:
-            typeof passenger?.firstName === "string"
-                ? passenger.firstName.trim()
-                : "",
-        lastName:
-            typeof passenger?.lastName === "string"
-                ? passenger.lastName.trim()
-                : "",
-        email:
-            typeof passenger?.email === "string"
-                ? passenger.email.trim().toLowerCase()
-                : "",
-        phone: typeof passenger?.phone === "string" ? passenger.phone.trim() : "",
+        firstName: normalizeString(passenger?.firstName),
+        lastName: normalizeString(passenger?.lastName),
+        email: normalizeString(passenger?.email, { lowercase: true }),
+        phone: normalizeString(passenger?.phone),
     }));
 
     const hasInvalidPassenger = normalizedPassengers.some(
@@ -178,17 +182,14 @@ const validatePassengerUpdates = (passengers, expectedCount) => {
 };
 
 const createBookingApi = async (req, res) => {
-    const body = req.body && typeof req.body === "object" ? req.body : {};
+    let body = {};
+    if (req.body && typeof req.body === "object") {
+        body = req.body;
+    }
     const scheduleId = body.scheduleId;
-    const tripId = typeof body.tripId === "string" ? body.tripId.trim() : "";
-    const selectedDay =
-        typeof body.selectedDay === "string"
-            ? body.selectedDay.trim().toLowerCase()
-            : "";
-    const ticketClass =
-        typeof body.ticketClass === "string"
-            ? body.ticketClass.trim().toLowerCase()
-            : "";
+    const tripId = normalizeString(body.tripId);
+    const selectedDay = normalizeString(body.selectedDay, { lowercase: true });
+    const ticketClass = normalizeString(body.ticketClass, { lowercase: true });
     const passengers = body.passengers;
 
     if (
@@ -218,8 +219,22 @@ const createBookingApi = async (req, res) => {
         if (!schedule) {
             return res.status(404).json({ error: "Schedule not found" });
         }
+        if (schedule.status === false) {
+            return res.status(409).json({ error: "This schedule is inactive" });
+        }
         if (schedule.tripId !== tripId) {
             return res.status(400).json({ error: "Trip does not match the schedule" });
+        }
+        const trip = await findTripById(tripId);
+        if (!trip) {
+            return res.status(404).json({ error: "Trip not found" });
+        }
+        const availability = await getTripAvailability(trip);
+        if (!availability.isAvailable) {
+            return res.status(409).json({
+                error: availability.message,
+                availability,
+            });
         }
         if (
             !schedule.daysOfWeek.some(
@@ -368,27 +383,63 @@ const getBookingById = async (req, res) => {
 };
 
 const processBookingRequest = async (req, res) => {
-    const passengers = Array.isArray(req.body.passengers)
-        ? req.body.passengers
-        : Object.values(req.body.passengers || {});
-    const booking = {
-        id: generateConfirmationCode(),
-        scheduleId: Number(req.body.scheduleId),
-        tripId: req.body.tripId,
-        ticketClass: req.body.ticketClass,
-        selectedDay: req.body.selectedDay,
-        passengers,
-        ...(req.user ? { userId: req.user._id } : {}),
-    };
-
     try {
+        const scheduleId = Number(req.body.scheduleId);
+        if (!Number.isSafeInteger(scheduleId)) {
+            return res.status(400).send("Invalid schedule ID.");
+        }
+
+        const schedule = await findScheduleById(scheduleId);
+        if (!schedule) {
+            return res.status(404).render("errors/404", {
+                title: "Schedule Not Found",
+                error: "The requested schedule could not be found.",
+            });
+        }
+        if (schedule.status === false) {
+            return res.redirect(`/trips/${encodeURIComponent(schedule.tripId)}`);
+        }
+
+        const trip = await findTripById(schedule.tripId);
+        if (!trip) {
+            return res.status(404).render("errors/404", {
+                title: "Trip Not Found",
+                error: "The trip for this schedule could not be found.",
+            });
+        }
+        if (req.body.tripId !== schedule.tripId) {
+            return res.status(400).send("The selected trip does not match the schedule.");
+        }
+        const availability = await getTripAvailability(trip);
+        if (!availability.isAvailable) {
+            return res.redirect(`/trips/${encodeURIComponent(trip.id)}`);
+        }
+
+        let passengers = [];
+        if (Array.isArray(req.body.passengers)) {
+            passengers = req.body.passengers;
+        } else {
+            passengers = Object.values(req.body.passengers || {});
+        }
+        const booking = {
+            id: generateConfirmationCode(),
+            scheduleId,
+            tripId: req.body.tripId,
+            ticketClass: req.body.ticketClass,
+            selectedDay: req.body.selectedDay,
+            passengers,
+        };
+        if (req.user) {
+            booking.userId = req.user._id;
+        }
+
         await createNewBooking(booking);
         return res.redirect(`/trips/confirmation/${booking.id}`);
     } catch (error) {
         console.error("Error creating booking:", error);
         return res.status(500).render("errors/500", {
             title: "Server Error",
-            error: error.message,
+            error: "An error occurred while processing the booking.",
             stack: error.stack,
         });
     }
@@ -405,6 +456,9 @@ const bookingPage = async (req, res) => {
             error: "The requested schedule could not be found.",
         });
     }
+    if (schedule.status === false) {
+        return res.redirect(`/trips/${encodeURIComponent(schedule.tripId)}`);
+    }
 
     const trip = await findTripById(schedule.tripId);
     if (!trip) {
@@ -412,6 +466,10 @@ const bookingPage = async (req, res) => {
             title: "Trip Not Found",
             error: "The trip for this schedule could not be found.",
         });
+    }
+    const availability = await getTripAvailability(trip);
+    if (!availability.isAvailable) {
+        return res.redirect(`/trips/${encodeURIComponent(trip.id)}`);
     }
 
     const ticketClasses = await getAllTicketClasses();
@@ -431,12 +489,18 @@ const bookingPage = async (req, res) => {
 };
 
 const bookingsPage = (req, res, { personal = false } = {}) => {
+    let title = "Manage Bookings";
+    let bookingsScope = "all";
+    if (personal) {
+        title = "Your Bookings";
+        bookingsScope = "mine";
+    }
     res.render("bookings", {
-        title: personal ? "Your Bookings" : "Manage Bookings",
+        title,
         isAdmin: res.locals.isAdmin,
         currentUserId: String(req.user._id),
         currentUserEmail: req.user.email,
-        bookingsScope: personal ? "mine" : "all",
+        bookingsScope,
     });
 };
 
@@ -458,134 +522,176 @@ const confirmationPage = async (req, res) => {
     });
 };
 
-//Update: Added getPaginatedBookings function to fetch bookings with pagination, sorting, and ordering.
+const bookingSortFields = [
+    "createdAt",
+    "selectedDay",
+    "ticketClass",
+    "tripId",
+    "scheduleId",
+    "id",
+];
 
-const parsePositiveInteger = (value, defaultValue) => {
+const parseBookingDate = (value, field) => {
     if (value === undefined) {
-        return defaultValue;
+        return { value: undefined };
     }
-
-    const parsed = Number(value);
-    if (!Number.isInteger(parsed) || parsed < 1) {
-        return null;
+    if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        return { error: `${field} must be a valid date in YYYY-MM-DD format.` };
     }
-
-    return parsed;
+    const parsed = new Date(`${value}T00:00:00.000Z`);
+    if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
+        return { error: `${field} must be a valid date in YYYY-MM-DD format.` };
+    }
+    return { value: parsed };
 };
 
-
-const getPaginatedBookings = async (req, res) => {
-
-    const page = parsePositiveInteger(req.query.page, 1);
-    const limit = parsePositiveInteger(req.query.limit, 10);
-    if (!page || !limit || limit > 50) {
-        return res.status(400).json({
-            errors: [{ field: 'pagination', message: 'page and limit must be valid positive numbers. Maximum limit is 50.' }]
-        });
+const getBookingList = async (req, { userId, email } = {}) => {
+    const options = parseListQuery(req.query, bookingSortFields, "createdAt");
+    if (options.errors.length > 0) {
+        return { error: options.errors };
     }
 
-    const allowedSortFields = ['createdAt', 'selectedDay', 'ticketClass', 'tripId', 'scheduleId'];
-    if (req.query.sort && !allowedSortFields.includes(req.query.sort)) {
-        return res.status(400).json({
-            errors: [{ field: 'sort', message: 'sort is not supported.' }]
-        });
+    const filters = parseOptionalFilters(req.query, {
+        q: { maxLength: 100 },
+        ticketClass: {},
+        tripId: {},
+    });
+    const { q: search, ticketClass, tripId } = filters.values;
+    const startDate = parseBookingDate(req.query.startDate, "startDate");
+    const endDate = parseBookingDate(req.query.endDate, "endDate");
+    const filterErrors = [...filters.errors];
+    if (startDate.error) {
+        filterErrors.push({ field: "startDate", message: startDate.error });
     }
-    const sort = req.query.sort || 'createdAt';
-    const order = req.query.order || 'asc';
-
-    console.log(`Fetching bookings with pagination: page=${page}, limit=${limit}, sort=${sort}, order=${order}`);
+    if (endDate.error) {
+        filterErrors.push({ field: "endDate", message: endDate.error });
+    }
+    if (filterErrors.length > 0) {
+        return {
+            error: filterErrors,
+        };
+    }
+    if (startDate.value && endDate.value && endDate.value < startDate.value) {
+        return {
+            error: [{
+                field: "dateRange",
+                message: "endDate cannot be earlier than startDate.",
+            }],
+        };
+    }
 
     const filter = {};
-    const isAdmin = req.user?.role?.name === "admin";
-    const requestedScope = req.query.scope || "all";
+    const appliedQuery = {};
+    let user = req.user;
+    if (userId) {
+        user = { _id: userId, email };
+    }
+    let requestedScope = "all";
+    if (req.query.scope !== undefined) {
+        requestedScope = req.query.scope;
+    }
     if (!["all", "mine"].includes(requestedScope)) {
-        return res.status(400).json({
-            errors: [{ field: "scope", message: "scope must be all or mine." }],
-        });
+        return {
+            error: [{ field: "scope", message: "scope must be all or mine." }],
+        };
     }
-    const scope = isAdmin ? requestedScope : "mine";
-
+    let scope = "mine";
+    if (user?.role?.name === "admin" && !userId) {
+        scope = requestedScope;
+    }
     if (scope === "mine") {
-        const escapedEmail = req.user.email.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const escapedEmail = escapeRegExp(user.email);
         filter.$or = [
-            { userId: req.user._id },
-            {
-                "passengers.email": {
-                    $regex: `^${escapedEmail}$`,
-                    $options: "i",
-                },
-            },
+            { userId: user._id },
+            { "passengers.email": { $regex: `^${escapedEmail}$`, $options: "i" } },
         ];
+        appliedQuery.scope = "mine";
+    } else {
+        appliedQuery.scope = "all";
     }
 
-    const ticketClass = req.query.ticketClass || '';
-    const startDate = req.query.startDate || '';
-    const endDate = req.query.endDate || '';
-
-    if (ticketClass != '') {
-        filter.ticketClass = ticketClass;
-    }
-
-    // figure out how to check they aren;t overlapping and be able to create a filter for the date ranges independently
-    // if (startDate != '' && endDate != '') {
-    //     const start = new Date(startDate);
-    //     const end = new Date(endDate);
-    //     console.log(`Filtering bookings from ${start} to ${end}`);
-    //     if (isNaN(start.getTime()) || isNaN(end.getTime())) {
-    //         return res.status(400).json({
-    //             errors: [{ field: 'dateRange', message: 'startDate and endDate must be valid dates.' }]
-    //         });
-    //     }
-    //     filter.createdAt.$gte = start.toISOString();
-    //     filter.createdAt.$lte= end.toISOString();
-    // }
-    if(endDate !='' && startDate != '' && endDate < startDate){
-        return res.status(400).json({
-            errors: [{ field: 'dateRange', message: 'endDate cannot be earlier than startDate.' }]
+    if (search.value) {
+        const pattern = escapeRegExp(search.value);
+        const searchFilters = [];
+        if (filter.$or) {
+            searchFilters.push({ $or: filter.$or });
+        }
+        searchFilters.push({
+            $or: [
+                { id: { $regex: pattern, $options: "i" } },
+                { tripId: { $regex: pattern, $options: "i" } },
+                { "passengers.firstName": { $regex: pattern, $options: "i" } },
+                { "passengers.lastName": { $regex: pattern, $options: "i" } },
+                { "passengers.email": { $regex: pattern, $options: "i" } },
+            ],
         });
+        filter.$and = searchFilters;
+        delete filter.$or;
+        appliedQuery.q = search.value;
     }
-    if (startDate != '') {
-        console.log("valid start date provided, checking if it's a valid date...");
-        const start = new Date(`${startDate}T23:59:59.999Z`);
-        if (isNaN(start.getTime())) {
-            return res.status(400).json({
-                errors: [{ field: 'startDate', message: 'startDate must be a valid date.' }]
-            });
+    if (ticketClass.value) {
+        filter.ticketClass = { $regex: `^${escapeRegExp(ticketClass.value)}$`, $options: "i" };
+        appliedQuery.ticketClass = ticketClass.value;
+    }
+    if (tripId.value) {
+        filter.tripId = { $regex: `^${escapeRegExp(tripId.value)}$`, $options: "i" };
+        appliedQuery.tripId = tripId.value;
+    }
+    if (startDate.value || endDate.value) {
+        filter.createdAt = {};
+        if (startDate.value) {
+            filter.createdAt.$gte = startDate.value;
+            appliedQuery.startDate = req.query.startDate;
         }
-        filter.createdAt = filter.createdAt || {}
-        filter.createdAt.$gte = start;
-    }
-    if (endDate != '') {
-        console.log("valid end date provided, checking if it's a valid date...");
-        const end = new Date(`${endDate}T23:59:59.999Z`);
-        if (isNaN(end.getTime())) {
-            return res.status(400).json({
-                errors: [{ field: 'endDate', message: 'endDate must be a valid date.' }]
-            });
+        if (endDate.value) {
+            const exclusiveEnd = new Date(endDate.value);
+            exclusiveEnd.setUTCDate(exclusiveEnd.getUTCDate() + 1);
+            filter.createdAt.$lt = exclusiveEnd;
+            appliedQuery.endDate = req.query.endDate;
         }
-        filter.createdAt = filter.createdAt || {}
-        filter.createdAt.$lte = end;
     }
-    
 
+    const { page, limit, sort, order, orderName } = options;
+    const { bookings, totalItems } = await findPaginatedBookings({
+        filter,
+        page,
+        limit,
+        sort,
+        order,
+    });
+    const response = createListResponse({
+        data: bookings,
+        page,
+        limit,
+        totalItems,
+        query: appliedQuery,
+        sort,
+        order,
+    });
 
-    console.log(`Filter applied: ${JSON.stringify(filter)}`);
+    return {
+        response: {
+            ...response,
+            bookings,
+            total: totalItems,
+            filter: appliedQuery,
+            order: orderName,
+        },
+    };
+};
 
+const getPaginatedBookings = async (req, res) => {
     try {
-        const bookingsData = await findPaginatedBookings({
-            filter: filter,
-            page: parseInt(page),
-            limit: parseInt(limit),
-            sort,
-            order
-        });
-        return res.status(200).json(bookingsData);
+        const result = await getBookingList(req);
+        if (result.error) {
+            return res.status(400).json({ errors: result.error });
+        }
+        return res.status(200).json(result.response);
     } catch (error) {
         console.error("Error fetching paginated bookings:", error);
         return res.status(500).json({ error: "Failed to fetch paginated bookings" });
     }
-
-}
+};
 
 export {
     getAllBookings,

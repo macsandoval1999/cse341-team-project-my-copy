@@ -98,7 +98,7 @@ const loadTrainTrips = async () => {
         if (!response.ok) throw new Error(`Trips request failed (${response.status})`);
 
         const payload = await response.json();
-        renderTrainTrips(payload.trips || []);
+        renderTrainTrips(payload.data || payload.trips || []);
 
         loadingEl.hidden = true;
     } catch (error) {

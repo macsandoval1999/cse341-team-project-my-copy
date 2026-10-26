@@ -10,36 +10,38 @@ export async function getPaginatedAllUsers(
     order
 ) {
     const skip = (page - 1) * limit;
-    const userQuery =
-        sort === "role"
-            ? User.aggregate([
-                  { $match: filter },
-                  {
-                      $lookup: {
-                          from: Role.collection.name,
-                          localField: "role",
-                          foreignField: "_id",
-                          as: "role",
-                      },
-                  },
-                  {
-                      $unwind: {
-                          path: "$role",
-                          preserveNullAndEmptyArrays: true,
-                      },
-                  },
-                  { $sort: { "role.name": order, _id: 1 } },
-                  { $skip: skip },
-                  { $limit: limit },
-                  { $project: { passwordHash: 0 } },
-              ])
-            : User.find(filter)
-                  .select("-passwordHash")
-                  .populate("role")
-                  .sort({ [sort]: order, _id: 1 })
-                  .skip(skip)
-                  .limit(limit)
-                  .lean();
+    let userQuery;
+    if (sort === "role") {
+        userQuery = User.aggregate([
+            { $match: filter },
+            {
+                $lookup: {
+                    from: Role.collection.name,
+                    localField: "role",
+                    foreignField: "_id",
+                    as: "role",
+                },
+            },
+            {
+                $unwind: {
+                    path: "$role",
+                    preserveNullAndEmptyArrays: true,
+                },
+            },
+            { $sort: { "role.name": order, _id: 1 } },
+            { $skip: skip },
+            { $limit: limit },
+            { $project: { passwordHash: 0 } },
+        ]);
+    } else {
+        userQuery = User.find(filter)
+            .select("-passwordHash")
+            .populate("role")
+            .sort({ [sort]: order, _id: 1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
+    }
     const [users, countResult] = await Promise.all([
         userQuery,
         User.aggregate([{ $match: filter }, { $count: "totalUsers" }]),

@@ -11,13 +11,17 @@ import {
 } from "../controllers/trains.js";
 import {
     getAllSchedules,
+    getAdminSchedules,
     getScheduleById,
     getSchedulesByTripId,
     getSchedulesByTripAndMonth,
+    createScheduleForTrip,
+    updateScheduleById,
     validateMonth,
 } from "../controllers/schedules.js";
 import { getAllStations, getStationById } from "../controllers/stations.js";
 import {
+    createTrip,
     getTripById,
     updateTrip,
     deleteTrip,
@@ -438,12 +442,31 @@ router.post("/api/users", requireApiGuestOrAdmin, register);
  *   get:
  *     tags: [Roles]
  *     summary: List roles
- *     description: Admin only.
+ *     description: Admin only. Returns a standard paginated response and supports a case-insensitive name search.
  *     security:
  *       - SessionCookieAuth: []
+ *     parameters:
+ *       - name: page
+ *         in: query
+ *         schema: { type: integer, default: 1, minimum: 1 }
+ *       - name: limit
+ *         in: query
+ *         schema: { type: integer, default: 10, minimum: 1, maximum: 50 }
+ *       - name: q
+ *         in: query
+ *         schema: { type: string, minLength: 1, maxLength: 100 }
+ *         description: Searches role names.
+ *       - name: sort
+ *         in: query
+ *         schema: { type: string, enum: [name], default: name }
+ *       - name: order
+ *         in: query
+ *         schema: { type: string, enum: [asc, desc], default: asc }
  *     responses:
  *       '200':
- *         description: Roles returned successfully.
+ *         description: Returns data, applied query, sort, and pagination metadata.
+ *       '400':
+ *         description: Invalid pagination, sort, or search value.
  *       '401':
  *         description: Missing or invalid session.
  *       '403':
@@ -589,7 +612,9 @@ router.get("/api/trains/:id", getTrainById);
  *     tags:
  *       - Trains
  *     summary: Get the trips a train runs
- *     description: Returns every trip whose trainId matches the requested train.
+ *     description: >
+ *       Returns one page of trips whose trainId matches the requested train.
+ *       Supports region, season, and keyword filters with dynamic sorting and pagination.
  *     parameters:
  *       - name: id
  *         in: path
@@ -598,9 +623,33 @@ router.get("/api/trains/:id", getTrainById);
  *         schema:
  *           type: string
  *         example: kiha-261
+ *       - name: page
+ *         in: query
+ *         schema: { type: integer, default: 1, minimum: 1 }
+ *       - name: limit
+ *         in: query
+ *         schema: { type: integer, default: 10, minimum: 1, maximum: 50 }
+ *       - name: q
+ *         in: query
+ *         schema: { type: string, minLength: 1, maxLength: 100 }
+ *         description: Searches trip names and descriptions.
+ *       - name: region
+ *         in: query
+ *         schema: { type: string }
+ *       - name: season
+ *         in: query
+ *         schema: { type: string }
+ *       - name: sort
+ *         in: query
+ *         schema: { type: string, enum: [name, region, distance, bestSeason], default: name }
+ *       - name: order
+ *         in: query
+ *         schema: { type: string, enum: [asc, desc], default: asc }
  *     responses:
  *       '200':
- *         description: Trips retrieved successfully.
+ *         description: Returns data, trips compatibility alias, applied query, sort, and pagination metadata.
+ *       '400':
+ *         description: Invalid pagination, sort, or filter value.
  *       '404':
  *         description: Train was not found.
  *       '500':
@@ -783,15 +832,64 @@ router.put("/api/trips/:id/train", requireApiLogin, requireApiRole("admin"), mov
  *   get:
  *     tags:
  *       - Schedules
- *     summary: Get all schedules
- *     description: Returns every schedule in the schedule collection
+ *     summary: Get schedules
+ *     description: Returns one page of schedules, optionally filtered by trip, day, status, or keyword.
+ *     parameters:
+ *       - name: page
+ *         in: query
+ *         schema: { type: integer, default: 1, minimum: 1 }
+ *       - name: limit
+ *         in: query
+ *         schema: { type: integer, default: 10, minimum: 1, maximum: 50 }
+ *       - name: q
+ *         in: query
+ *         schema: { type: string, minLength: 1, maxLength: 100 }
+ *         description: Searches trip ID, departure time, arrival time, and days of week.
+ *       - name: tripId
+ *         in: query
+ *         schema: { type: string }
+ *       - name: day
+ *         in: query
+ *         schema: { type: string, enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday] }
+ *       - name: status
+ *         in: query
+ *         schema: { type: boolean }
+ *       - name: sort
+ *         in: query
+ *         schema: { type: string, enum: [id, tripId, departureTime, arrivalTime, status], default: id }
+ *       - name: order
+ *         in: query
+ *         schema: { type: string, enum: [asc, desc], default: asc }
  *     responses:
  *       '200':
- *         description: Schedules retrieved successfully
+ *         description: Returns data, applied query, sort, and pagination metadata.
+ *       '400':
+ *         description: Invalid pagination, sort, or filter value.
  *       '500':
  *         description: Internal server error
  */
 router.get("/api/schedules", getAllSchedules);
+/**
+ * @openapi
+ * /api/admin/schedules:
+ *   get:
+ *     tags: [Schedules]
+ *     summary: Get schedules with booking-use indicators (Admin Only)
+ *     description: Returns the filtered schedule list with a hasBookings flag for each schedule. Booked schedules can be inactivated, but their departure times and operating days cannot be changed.
+ *     security:
+ *       - SessionCookieAuth: []
+ *     responses:
+ *       '200': { description: Schedule list with booking-use indicators. }
+ *       '401': { description: Authentication required. }
+ *       '403': { description: Administrator role required. }
+ *       '500': { description: Internal server error. }
+ */
+router.get(
+    "/api/admin/schedules",
+    requireApiLogin,
+    requireApiRole("admin"),
+    getAdminSchedules
+);
 
 /**
  * @openapi
@@ -829,7 +927,7 @@ router.get("/api/schedules/:id", getScheduleById);
  *     tags:
  *       - Schedules
  *     summary: Get schedules for a trip
- *     description: Returns schedules for a trip, with optional month filtering.
+ *     description: Returns one page of schedules for a trip and an availability object. Trips without an existing linked train remain visible but cannot be booked.
  *     parameters:
  *       - name: tripId
  *         in: path
@@ -845,9 +943,30 @@ router.get("/api/schedules/:id", getScheduleById);
  *           minimum: 1
  *           maximum: 12
  *         example: 10
+ *       - name: page
+ *         in: query
+ *         schema: { type: integer, default: 1, minimum: 1 }
+ *       - name: limit
+ *         in: query
+ *         schema: { type: integer, default: 10, minimum: 1, maximum: 50 }
+ *       - name: q
+ *         in: query
+ *         schema: { type: string, minLength: 1, maxLength: 100 }
+ *       - name: day
+ *         in: query
+ *         schema: { type: string, enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday] }
+ *       - name: status
+ *         in: query
+ *         schema: { type: boolean }
+ *       - name: sort
+ *         in: query
+ *         schema: { type: string, enum: [id, tripId, departureTime, arrivalTime, status], default: id }
+ *       - name: order
+ *         in: query
+ *         schema: { type: string, enum: [asc, desc], default: asc }
  *     responses:
  *       '200':
- *         description: Schedules were returned successfully.
+ *         description: Returns data, applied query, sort, pagination metadata, and trip availability. A month outside the trip's operating months returns an empty page.
  *       '400':
  *         description: Invalid month value.
  *       '404':
@@ -864,15 +983,129 @@ router.get("/api/trips/:tripId/schedules", validateMonth, (req, res, next) => {
 
 /**
  * @openapi
+ * /api/trips/{tripId}/schedules:
+ *   post:
+ *     tags: [Schedules]
+ *     summary: Create a schedule owned by a trip (Admin Only)
+ *     description: Creates a new schedule record for this trip. Schedules belong to exactly one trip; create a separate record to use the same times for another trip.
+ *     security:
+ *       - SessionCookieAuth: []
+ *     parameters:
+ *       - name: tripId
+ *         in: path
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [departureTime, arrivalTime, daysOfWeek]
+ *             properties:
+ *               departureTime: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
+ *               arrivalTime: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
+ *               daysOfWeek:
+ *                 type: array
+ *                 items: { type: string, enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday] }
+ *               status: { type: boolean, default: true }
+ *     responses:
+ *       '201': { description: Schedule created. }
+ *       '400': { description: Invalid schedule information. }
+ *       '401': { description: Authentication required. }
+ *       '403': { description: Administrator role required. }
+ *       '404': { description: Trip was not found. }
+ *       '409': { description: Schedule ID conflict; retry the request. }
+ *       '500': { description: Internal server error. }
+ */
+router.post(
+    "/api/trips/:tripId/schedules",
+    requireApiLogin,
+    requireApiRole("admin"),
+    createScheduleForTrip
+);
+
+/**
+ * @openapi
+ * /api/schedules/{id}:
+ *   put:
+ *     tags: [Schedules]
+ *     summary: Update a schedule's times and operating days (Admin Only)
+ *     description: Updates schedule details without changing its owning trip. Ownership cannot be transferred, and booked departure times or operating days cannot be changed.
+ *     security:
+ *       - SessionCookieAuth: []
+ *     parameters:
+ *       - name: id
+ *         in: path
+ *         required: true
+ *         schema: { type: integer }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               departureTime: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
+ *               arrivalTime: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
+ *               daysOfWeek:
+ *                 type: array
+ *                 items: { type: string, enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday] }
+ *               status: { type: boolean }
+ *     responses:
+ *       '200': { description: Schedule updated. }
+ *       '400': { description: Invalid schedule information or attempted ownership change. }
+ *       '401': { description: Authentication required. }
+ *       '403': { description: Administrator role required. }
+ *       '404': { description: Schedule was not found. }
+ *       '409': { description: Schedule times or operating days are in use by bookings. }
+ *       '500': { description: Internal server error. }
+ */
+router.put(
+    "/api/schedules/:id",
+    requireApiLogin,
+    requireApiRole("admin"),
+    updateScheduleById
+);
+
+/**
+ * @openapi
  * /api/stations:
  *   get:
  *     tags:
  *       - Stations
- *     summary: Get all stations
- *     description: Returns every station in the stations collection
+ *     summary: Get stations
+ *     description: Returns one page of stations, optionally filtered by keyword, region, prefecture, or facility.
+ *     parameters:
+ *       - name: page
+ *         in: query
+ *         schema: { type: integer, default: 1, minimum: 1 }
+ *       - name: limit
+ *         in: query
+ *         schema: { type: integer, default: 10, minimum: 1, maximum: 50 }
+ *       - name: q
+ *         in: query
+ *         schema: { type: string, minLength: 1, maxLength: 100 }
+ *       - name: region
+ *         in: query
+ *         schema: { type: string }
+ *       - name: prefecture
+ *         in: query
+ *         schema: { type: string }
+ *       - name: facility
+ *         in: query
+ *         schema: { type: string }
+ *       - name: sort
+ *         in: query
+ *         schema: { type: string, enum: [id, name, prefecture, region], default: id }
+ *       - name: order
+ *         in: query
+ *         schema: { type: string, enum: [asc, desc], default: asc }
  *     responses:
  *       '200':
- *         description: Stations retrieved successfully
+ *         description: Returns data, applied query, sort, and pagination metadata.
+ *       '400':
+ *         description: Invalid pagination, sort, or filter value.
  *       '500':
  *         description: Internal server error
  */
@@ -907,6 +1140,64 @@ router.get("/api/stations/:id", getStationById);
 /**
  * @openapi
  * /api/trips:
+ *   post:
+ *     tags:
+ *       - Trips
+ *     summary: Create a trip (Admin Only)
+ *     description: Creates a trip with an existing train and stations and at least one initial schedule. Additional schedules can be added through the trip-specific schedules endpoint.
+ *     security:
+ *       - SessionCookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [id, name, description, startStation, endStation, trainId, duration, distance, schedules]
+ *             properties:
+ *               id: { type: string, pattern: '^[a-z0-9]+(-[a-z0-9]+)*$', example: coastal-express }
+ *               name: { type: string, example: Coastal Express }
+ *               description: { type: string }
+ *               startStation: { type: string, example: aomori }
+ *               endStation: { type: string, example: akita }
+ *               trainId: { type: string, example: series-e353 }
+ *               region: { type: string, example: tohoku }
+ *               duration: { type: string, example: 4.5 hours }
+ *               distance: { type: number, minimum: 0 }
+ *               bestSeason: { type: string, example: autumn }
+ *               operatingMonths:
+ *                 type: array
+ *                 items: { type: integer, minimum: 1, maximum: 12 }
+ *               highlights:
+ *                 type: array
+ *                 items: { type: string }
+ *               imageUrl: { type: string }
+ *               schedules:
+ *                 type: array
+ *                 minItems: 1
+ *                 items:
+ *                   type: object
+ *                   required: [departureTime, arrivalTime, daysOfWeek]
+ *                   properties:
+ *                     departureTime: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
+ *                     arrivalTime: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' }
+ *                     daysOfWeek:
+ *                       type: array
+ *                       minItems: 1
+ *                       items: { type: string, enum: [monday, tuesday, wednesday, thursday, friday, saturday, sunday] }
+ *     responses:
+ *       '201':
+ *         description: Trip created successfully.
+ *       '400':
+ *         description: Invalid trip details, train, or station.
+ *       '401':
+ *         description: Authentication required.
+ *       '403':
+ *         description: Administrator role required.
+ *       '409':
+ *         description: Trip ID already exists.
+ *       '500':
+ *         description: Internal server error.
  *   get:
  *     tags:
  *       - Trips
@@ -970,6 +1261,20 @@ router.get("/api/stations/:id", getStationById);
  *         schema:
  *           type: string
  *         example: gorge
+ *       - name: availability
+ *         in: query
+ *         description: Filter by whether a trip has both a linked train and at least one active schedule.
+ *         schema:
+ *           type: string
+ *           enum: [available, unavailable, all]
+ *           default: all
+ *       - name: scheduleStatus
+ *         in: query
+ *         description: Filter by schedule coverage. "missing" means no active schedules; "none" means no schedule records at all.
+ *         schema:
+ *           type: string
+ *           enum: [all, configured, missing, none]
+ *           default: all
  *     responses:
  *       '200':
  *         description: Trips retrieved successfully
@@ -1013,6 +1318,15 @@ router.get("/api/stations/:id", getStationById);
  *                           type: integer
  *                       imageUrl:
  *                         type: string
+ *                       availability:
+ *                         type: object
+ *                         properties:
+ *                           isAvailable:
+ *                             type: boolean
+ *                             description: True only when the trip has a linked train and at least one active schedule.
+ *                           message:
+ *                             type: string
+ *                             nullable: true
  *                       createdAt:
  *                         type: string
  *                         format: date-time
@@ -1053,6 +1367,12 @@ router.get("/api/stations/:id", getStationById);
  *       '500':
  *         description: Internal error
  */
+router.post(
+    "/api/trips",
+    requireApiLogin,
+    requireApiRole("admin"),
+    createTrip
+);
 router.get("/api/trips", getPaginatedTripsList);
 
 
@@ -1064,7 +1384,7 @@ router.get("/api/trips", getPaginatedTripsList);
  *     tags:
  *       - Trips
  *     summary: Get a trip by ID
- *     description: Returns one trip matching the requested ID
+ *     description: Returns one trip matching the requested ID, including whether its linked train makes it available for booking.
  *     parameters:
  *       - name: id
  *         in: path
@@ -1075,7 +1395,25 @@ router.get("/api/trips", getPaginatedTripsList);
  *           example: alpine-panorama
  *     responses:
  *       '200':
- *         description: Trip retrieved successfully.
+ *         description: Trip retrieved successfully with availability.isAvailable and availability.message indicating booking eligibility.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 id:
+ *                   type: string
+ *                 trainId:
+ *                   type: string
+ *                 availability:
+ *                   type: object
+ *                   required: [isAvailable, message]
+ *                   properties:
+ *                     isAvailable:
+ *                       type: boolean
+ *                     message:
+ *                       type: string
+ *                       nullable: true
  *       '404':
  *         description: Trip was not found
  *       '500':
@@ -1090,7 +1428,7 @@ router.get("/api/trips/:id", getTripById);
  *     tags:
  *       - Trips
  *     summary: Update an existing trip (Admin Only)
- *     description: Updates trip details. Station values must match station names in the catalog; schedule IDs are numeric IDs from GET /api/schedules.
+ *     description: Updates trip details, including its linked train, region, duration, season, operating months, highlights, and image URL. Station values may be station names or IDs. Schedule ownership is managed through the trip-specific schedules endpoint and cannot be transferred.
  *     security:
  *       - SessionCookieAuth: []
  *     parameters:
@@ -1124,25 +1462,46 @@ router.get("/api/trips/:id", getTripById);
  *                 type: number
  *                 minimum: 0
  *                 example: 180
- *               scheduleIds:
+ *               trainId:
+ *                 type: string
+ *                 description: ID of an existing train to link to this trip.
+ *                 example: series-e353
+ *               region:
+ *                 type: string
+ *                 example: central
+ *               duration:
+ *                 type: string
+ *                 example: 4.5 hours
+ *               bestSeason:
+ *                 type: string
+ *                 example: autumn
+ *               operatingMonths:
  *                 type: array
- *                 description: Numeric IDs of existing schedules to associate with this trip
  *                 items:
  *                   type: integer
- *                   format: int32
- *                 example: [1, 2]
+ *                   minimum: 1
+ *                   maximum: 12
+ *                 example: [4, 5, 6, 7, 8, 9, 10, 11]
+ *               highlights:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 example: ["Mountain views", "Traditional villages"]
+ *               imageUrl:
+ *                 type: string
+ *                 format: uri
+ *                 example: "/images/routes/alpine-panorama.png"
  *             example:
  *               name: Alpine Panorama Express
  *               description: Journey through the Japanese Alps with stunning mountain views and traditional villages.
  *               startStation: Nagoya Station
  *               endStation: Toyama Station
  *               distance: 180
- *               scheduleIds: [1, 2]
  *     responses:
  *       '200':
- *         description: Trip and schedule associations updated successfully.
+ *         description: Trip details updated successfully.
  *       '400':
- *         description: Bad Request. Selected stations or schedules do not exist in the database.
+ *         description: Bad Request. A field is invalid or unsupported.
  *       '401':
  *         description: Unauthorized. User is not logged into the session.
  *       '403':
@@ -1166,7 +1525,7 @@ router.put(
  *     tags:
  *       - Trips
  *     summary: Delete a trip (Admin Only)
- *     description: Deletes a trip record by its custom ID. Automatically triggers a cascading deletion to remove all associated schedules.
+ *     description: Deletes a trip and its schedules only when the trip has no bookings.
  *     security:
  *       - SessionCookieAuth: []
  *     parameters:
@@ -1179,13 +1538,15 @@ router.put(
  *           example: alpine-panorama
  *     responses:
  *       '200':
- *         description: Trip and all of its cascading schedule dependencies deleted successfully.
+ *         description: Trip and its associated schedules deleted successfully.
  *       '401':
  *         description: Unauthorized. User is not logged into the session.
  *       '403':
  *         description: Forbidden. Authenticated user does not have the admin role.
  *       '404':
  *         description: Trip was not found matching the custom ID.
+ *       '409':
+ *         description: Trip has bookings and cannot be deleted.
  *       '500':
  *         description: Internal server error
  */
@@ -1206,9 +1567,44 @@ router.delete(
  *     description: Admins see all bookings. Other signed-in users see bookings they created or are listed as a passenger on.
  *     security:
  *       - SessionCookieAuth: []
+ *     parameters:
+ *       - name: page
+ *         in: query
+ *         schema: { type: integer, default: 1, minimum: 1 }
+ *       - name: limit
+ *         in: query
+ *         schema: { type: integer, default: 10, minimum: 1, maximum: 50 }
+ *       - name: q
+ *         in: query
+ *         schema: { type: string, minLength: 1, maxLength: 100 }
+ *         description: Searches confirmation ID, trip ID, and passenger names or emails.
+ *       - name: scope
+ *         in: query
+ *         schema: { type: string, enum: [all, mine], default: all }
+ *         description: Admins may choose either scope; other users are always restricted to their own bookings.
+ *       - name: ticketClass
+ *         in: query
+ *         schema: { type: string }
+ *       - name: tripId
+ *         in: query
+ *         schema: { type: string }
+ *       - name: startDate
+ *         in: query
+ *         schema: { type: string, format: date }
+ *       - name: endDate
+ *         in: query
+ *         schema: { type: string, format: date }
+ *       - name: sort
+ *         in: query
+ *         schema: { type: string, enum: [createdAt, selectedDay, ticketClass, tripId, scheduleId, id], default: createdAt }
+ *       - name: order
+ *         in: query
+ *         schema: { type: string, enum: [asc, desc], default: asc }
  *     responses:
  *       '200':
- *         description: Bookings returned successfully.
+ *         description: Returns data, bookings compatibility alias, applied query, sort, and pagination metadata.
+ *       '400':
+ *         description: Invalid pagination, sort, or filter value.
  *       '401':
  *         description: Authentication required.
  *       '500':
@@ -1282,7 +1678,7 @@ router.delete(
  *       '404':
  *         description: Schedule not found.
  *       '409':
- *         description: Booking confirmation ID already exists.
+ *         description: The trip is temporarily unavailable because it has no existing linked train, or the booking confirmation ID already exists.
  *       '500':
  *         description: Failed to create booking.
  */
@@ -1370,7 +1766,7 @@ router.get("/api/bookings/:id", requireApiLogin, getBookingById);
  *     tags:
  *       - Bookings
  *     summary: Get bookings for a user
- *     description: Users may retrieve bookings they created or are listed as a passenger on; admins may retrieve any user's bookings.
+ *     description: Users may retrieve bookings they created or are listed as a passenger on; admins may retrieve any user's bookings. Results use the standard paginated list response.
  *     security:
  *       - SessionCookieAuth: []
  *     parameters:
@@ -1380,9 +1776,36 @@ router.get("/api/bookings/:id", requireApiLogin, getBookingById);
  *         schema:
  *           type: string
  *         example: 6ab9358a87b7afeb8a3794b1
+ *       - name: page
+ *         in: query
+ *         schema: { type: integer, default: 1, minimum: 1 }
+ *       - name: limit
+ *         in: query
+ *         schema: { type: integer, default: 10, minimum: 1, maximum: 50 }
+ *       - name: q
+ *         in: query
+ *         schema: { type: string, minLength: 1, maxLength: 100 }
+ *       - name: ticketClass
+ *         in: query
+ *         schema: { type: string }
+ *       - name: tripId
+ *         in: query
+ *         schema: { type: string }
+ *       - name: startDate
+ *         in: query
+ *         schema: { type: string, format: date }
+ *       - name: endDate
+ *         in: query
+ *         schema: { type: string, format: date }
+ *       - name: sort
+ *         in: query
+ *         schema: { type: string, enum: [createdAt, selectedDay, ticketClass, tripId, scheduleId, id], default: createdAt }
+ *       - name: order
+ *         in: query
+ *         schema: { type: string, enum: [asc, desc], default: asc }
  *     responses:
  *       '200':
- *         description: User bookings returned successfully.
+ *         description: User bookings returned with applied query and pagination metadata.
  *       '400':
  *         description: Invalid user ID.
  *       '401':
@@ -1526,10 +1949,11 @@ router.delete("/api/bookings/:id", requireApiLogin, deleteBookingById);
  *           maximum: 50
  *       - name: sort
  *         in: query
- *         description: The field to sort by (default is 'createdAt'). Allowed values are 'createdAt', 'selectedDay', 'ticketClass', 'tripId', 'scheduleId'.
+ *         description: The field to sort by. Allowed values are 'createdAt', 'selectedDay', 'ticketClass', 'tripId', 'scheduleId', and 'id'.
  *         required: false
  *         schema:
  *           type: string
+ *           enum: [createdAt, selectedDay, ticketClass, tripId, scheduleId, id]
  *       - name: order
  *         in: query
  *         description: The order of sorting (default is 'asc'). Use 'desc' for descending order.
@@ -1539,13 +1963,29 @@ router.delete("/api/bookings/:id", requireApiLogin, deleteBookingById);
  *           enum: [asc, desc]
  *       - name: startDate
  *         in: query
- *         description: "The date the booking was created on or after (format: YYYY-MM-DD)"
+ *         description: "Inclusive start date for the booking creation date (format: YYYY-MM-DD)"
  *         required: false
  *         schema:
  *           type: string
+ *           format: date
  *       - name: endDate
  *         in: query
- *         description: "The date the booking was created on or before (format: YYYY-MM-DD)"
+ *         description: "Inclusive end date for the booking creation date (format: YYYY-MM-DD)"
+ *         required: false
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - name: q
+ *         in: query
+ *         description: Searches confirmation ID, trip ID, and passenger names or emails (maximum 100 characters).
+ *         required: false
+ *         schema:
+ *           type: string
+ *           minLength: 1
+ *           maxLength: 100
+ *       - name: tripId
+ *         in: query
+ *         description: Filter bookings by trip ID.
  *         required: false
  *         schema:
  *           type: string
@@ -1567,12 +2007,25 @@ router.delete("/api/bookings/:id", requireApiLogin, deleteBookingById);
  *
  *     responses:
  *       200:
- *         description: A paginated list of bookings
+ *         description: Standard paginated response with compatibility aliases for existing clients.
  *         content:
  *           application/json:
  *             schema:
  *               type: object
  *               properties:
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                 pagination:
+ *                   type: object
+ *                   description: Page, limit, totalItems, totalPages, hasNextPage, and hasPreviousPage.
+ *                 query:
+ *                   type: object
+ *                   description: Applied filters and scope.
+ *                 sort:
+ *                   type: object
+ *                   description: Applied sort field and direction.
  *                 total:
  *                   type: integer
  *                   description: Total number of bookings
@@ -1647,8 +2100,22 @@ router.get("/api/bookings_paginated", requireApiLogin, getPaginatedBookings);
  *     tags:
  *       - Ticket Classes
  *     summary: Get ticket classes
- *     description: Returns all ticket classes or filters them by an available day.
+ *     description: Returns one page of ticket classes, optionally filtered by day, class, or a keyword search.
  *     parameters:
+ *       - name: page
+ *         in: query
+ *         schema: { type: integer, default: 1, minimum: 1 }
+ *       - name: limit
+ *         in: query
+ *         schema: { type: integer, default: 10, minimum: 1, maximum: 50 }
+ *       - name: q
+ *         in: query
+ *         schema: { type: string, minLength: 1, maxLength: 100 }
+ *         description: Searches ticket class names and descriptions.
+ *       - name: class
+ *         in: query
+ *         schema: { type: string }
+ *         description: Filters by an exact ticket class name.
  *       - name: day
  *         in: query
  *         required: false
@@ -1656,11 +2123,17 @@ router.get("/api/bookings_paginated", requireApiLogin, getPaginatedBookings);
  *           type: string
  *           example: Monday
  *         description: The day of the week to filter ticket availability.
+ *       - name: sort
+ *         in: query
+ *         schema: { type: string, enum: [class, name, priceMultiplier], default: class }
+ *       - name: order
+ *         in: query
+ *         schema: { type: string, enum: [asc, desc], default: asc }
  *     responses:
  *       '200':
- *         description: Ticket classes retrieved successfully.
+ *         description: Returns data, applied query, sort, and pagination metadata.
  *       '400':
- *         description: Day query parameter is missing or invalid.
+ *         description: Invalid pagination, sort, or filter value.
  *       '500':
  *         description: Internal server error.
  */

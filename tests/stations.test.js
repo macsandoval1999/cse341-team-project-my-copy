@@ -15,8 +15,8 @@ describe("GET /api/stations", () => {
         // Assert
         expect(response.status).toBe(200);
         expect(response.headers["content-type"]).toContain("application/json");
-        expect(response.body).toBeInstanceOf(Array);
-        expect(response.body.length).toBeGreaterThan(0);
+        expect(response.body.data).toBeInstanceOf(Array);
+        expect(response.body.data.length).toBeGreaterThan(0);
     });
 
     // 2. Test that the response includes known seeded station data
@@ -29,7 +29,7 @@ describe("GET /api/stations", () => {
 
         // Assert
         expect(response.status).toBe(200);
-        expect(response.body).toEqual(
+        expect(response.body.data).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({
                     id: "nagoya",
@@ -53,7 +53,7 @@ describe("GET /api/stations", () => {
 
         // Act
         const response = await request(app).get("/api/stations");
-        const stationIds = response.body.map((station) => station.id);
+        const stationIds = response.body.data.map((station) => station.id);
 
         // Assert
         expect(response.status).toBe(200);
@@ -97,7 +97,7 @@ describe("GET /api/stations/:id", () => {
         const detailResponse = await request(app).get(
             `/api/stations/${stationId}`
         );
-        const listedStation = listResponse.body.find(
+        const listedStation = listResponse.body.data.find(
             (station) => station.id === stationId
         );
 

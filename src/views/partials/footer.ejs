@@ -2,5 +2,24 @@
     <footer class="content-grid">
         <p>&copy; 2025 &ndash; <%= new Date().getFullYear() %> Kizuna Rail.</p>
     </footer>
+    <dialog class="admin-delete-dialog" id="admin-delete-dialog" aria-labelledby="admin-delete-title">
+        <form class="admin-delete-dialog-content">
+            <div class="admin-delete-dialog-header">
+                <p class="admin-delete-kicker">Destructive action</p>
+                <h2 id="admin-delete-title">Confirm deletion</h2>
+                <p data-field="description"></p>
+            </div>
+            <label class="admin-delete-confirmation-label" for="admin-delete-input">
+                <span>Type <code data-field="identifier"></code> to confirm</span>
+                <input id="admin-delete-input" type="text" autocomplete="off" spellcheck="false">
+            </label>
+            <p class="admin-delete-dialog-error" data-field="error" role="alert" hidden></p>
+            <div class="admin-delete-dialog-actions">
+                <button type="button" data-action="cancel">Cancel</button>
+                <button type="button" class="admin-delete-confirm-button" data-action="confirm" disabled>Delete</button>
+            </div>
+        </form>
+    </dialog>
+    <script src="/js/admin-delete-confirm.js"></script>
 </body>
 </html>

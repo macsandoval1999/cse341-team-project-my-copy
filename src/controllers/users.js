@@ -11,6 +11,7 @@ import {
 import { deleteBookingsByUserId } from "../models/bookings.js";
 import { getRoleByName as findRoleByName } from "../models/roles.js";
 import { hasRole } from "../middleware/authentication.js";
+import { createPagination, parseListQuery } from "../utils/list-query.js";
 
 const allowedSortFields = ["name", "username", "email", "role"];
 const allowedUserRoles = ["admin", "customer"];
@@ -26,48 +27,20 @@ const normalizeName = (value) =>
         );
 const normalizeUsername = (value) => value.trim().toLowerCase();
 
-const parsePositiveInt = (value, defaultValue) => {
-    if (value === undefined || value === null) {
-        return defaultValue;
-    }
-    if (typeof value !== "string" || !/^\d+$/.test(value)) {
-        return null;
-    }
-    const parsed = Number(value);
-    return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
-};
-
 export const getPaginatedAllUsers = async (req, res) => {
     try {
-        const page = parsePositiveInt(req.query.page, 1);
-        const requestedLimit = parsePositiveInt(req.query.limit, 10);
-
-        if (!page || !requestedLimit || requestedLimit > 50) {
+        const options = parseListQuery(
+            req.query,
+            allowedSortFields,
+            "username"
+        );
+        if (options.errors.length > 0) {
             return res.status(400).json({
-                errors: [
-                    {
-                        field: "pagination",
-                        message:
-                            "page and limit must be positive integers, and limit cannot exceed 50",
-                    },
-                ],
+                errors: options.errors,
             });
         }
 
-        const limit = requestedLimit;
-        if (req.query.sort && !allowedSortFields.includes(req.query.sort)) {
-            return res.status(400).json({
-                errors: [
-                    {
-                        field: "sort",
-                        message: `Sort must be one of: ${allowedSortFields.join(", ")}`,
-                    },
-                ],
-            });
-        }
-
-        const sort = req.query.sort || "username";
-        const order = req.query.order === "desc" ? -1 : 1;
+        const { page, limit, sort, order, orderName } = options;
         const filter = {};
         const appliedQuery = {};
 
@@ -146,13 +119,10 @@ export const getPaginatedAllUsers = async (req, res) => {
         return res.status(200).json({
             data: users,
             query: appliedQuery,
+            sort: { field: sort, order: orderName },
             pagination: {
-                page,
-                limit,
+                ...createPagination(page, limit, totalUsers),
                 totalUsers,
-                totalPages: Math.ceil(totalUsers / limit),
-                hasNextPage: page * limit < totalUsers,
-                hasPreviousPage: page > 1,
             },
         });
     } catch (error) {
@@ -200,19 +170,19 @@ export async function accountPage(req, res) {
 
 export async function updateUser(req, res) {
     try {
-        const name =
-            typeof req.body?.name === "string"
-                ? normalizeName(req.body.name)
-                : "";
+        let name = "";
+        if (typeof req.body?.name === "string") {
+            name = normalizeName(req.body.name);
+        }
         const hasUsername = req.body?.username !== undefined;
-        const username =
-            typeof req.body?.username === "string"
-                ? normalizeUsername(req.body.username)
-                : "";
-        const email =
-            typeof req.body?.email === "string"
-                ? req.body.email.trim().toLowerCase()
-                : "";
+        let username = "";
+        if (typeof req.body?.username === "string") {
+            username = normalizeUsername(req.body.username);
+        }
+        let email = "";
+        if (typeof req.body?.email === "string") {
+            email = req.body.email.trim().toLowerCase();
+        }
         if (!name || !email) {
             return res
                 .status(400)
@@ -263,10 +233,10 @@ export async function updateUser(req, res) {
                     .status(403)
                     .json({ error: "Only admins can change user roles" });
             }
-            const requestedRole =
-                typeof req.body.role === "string"
-                    ? req.body.role.trim().toLowerCase()
-                    : "";
+            let requestedRole = "";
+            if (typeof req.body.role === "string") {
+                requestedRole = req.body.role.trim().toLowerCase();
+            }
             if (!["admin", "customer"].includes(requestedRole)) {
                 return res.status(400).json({ error: "Invalid user role" });
             }
@@ -294,10 +264,12 @@ export async function updateUser(req, res) {
         return res.status(200).json(user);
     } catch (error) {
         if (error.code === 11000) {
+            let message = "Email is already in use";
+            if (error.keyPattern?.username) {
+                message = "Username is already in use";
+            }
             return res.status(409).json({
-                error: error.keyPattern?.username
-                    ? "Username is already in use"
-                    : "Email is already in use",
+                error: message,
             });
         }
         if (error.name === "ValidationError" || error.name === "CastError") {
@@ -338,18 +310,22 @@ export async function deleteUser(req, res) {
 
 export async function register(req, res) {
     const apiRequest = req.path.startsWith("/api/");
-    const name =
-        typeof req.body?.name === "string" ? normalizeName(req.body.name) : "";
-    const username =
-        typeof req.body?.username === "string"
-            ? normalizeUsername(req.body.username)
-            : "";
-    const email =
-        typeof req.body?.email === "string"
-            ? req.body.email.trim().toLowerCase()
-            : "";
-    const password =
-        typeof req.body?.password === "string" ? req.body.password : "";
+    let name = "";
+    if (typeof req.body?.name === "string") {
+        name = normalizeName(req.body.name);
+    }
+    let username = "";
+    if (typeof req.body?.username === "string") {
+        username = normalizeUsername(req.body.username);
+    }
+    let email = "";
+    if (typeof req.body?.email === "string") {
+        email = req.body.email.trim().toLowerCase();
+    }
+    let password = "";
+    if (typeof req.body?.password === "string") {
+        password = req.body.password;
+    }
     const confirmPassword =
         req.body?.["confirm-password"] ?? req.body?.confirmPassword;
 
@@ -422,14 +398,15 @@ export async function register(req, res) {
         console.error("Error registering user:", error);
         if (error.code === 11000) {
             const isUsernameConflict = error.keyPattern?.username;
-            const registrationError = isUsernameConflict
-                ? "Username is already in use. Try another username."
-                : "Email is already in use. Try another email address.";
+            let registrationError = "Email is already in use. Try another email address.";
+            let apiError = "Email is already in use";
+            if (isUsernameConflict) {
+                registrationError = "Username is already in use. Try another username.";
+                apiError = "Username is already in use";
+            }
             if (apiRequest) {
                 return res.status(409).json({
-                    error: isUsernameConflict
-                        ? "Username is already in use"
-                        : "Email is already in use",
+                    error: apiError,
                 });
             }
             return res.status(409).render("register", {

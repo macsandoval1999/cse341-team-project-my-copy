@@ -2,6 +2,10 @@
 
 <section class="trains-hero">
     <h1>Welcome, <%= user.name %></h1>
+    <p class="page-description">Manage your account and find your trip and booking tools.</p>
+        <% if (isAdmin) { %>
+            <a href="/admin" class="admin-trips-back">&larr; Back to Admin Dashboard</a>
+        <% } %>
 </section>
 
 <nav class="dashboard-actions" aria-label="Dashboard links">
@@ -9,54 +13,5 @@
     <a href="/bookings">View Your Bookings</a>
     <a href="/trips">View Trips</a>
 </nav>
-
-<section
-    class="trains-catalog"
-    id="dashboard-bookings"
-    data-user-id="<%= user._id %>"
->
-    <div class="trains-state" id="dashboard-loading">
-        Loading your bookings...
-    </div>
-    <div class="trains-state trains-error" id="dashboard-error" hidden></div>
-    <p id="dashboard-empty" hidden>
-        You don't have any bookings yet. <a href="/trips">Browse trips</a> to
-        book your first trip.
-    </p>
-
-    <div class="trains-grid" id="dashboard-bookings-list"></div>
-
-    <template id="dashboard-booking-card-template">
-        <article class="train-card">
-            <header class="train-card-header">
-                <a class="booking-confirmation-link">
-                    <h2 data-field="tripId"></h2>
-                    <span class="train-operator" data-field="ticket"></span>
-                </a>
-            </header>
-
-            <dl class="train-specs">
-                <div class="spec-item">
-                    <dt>Travel Day</dt>
-                    <dd data-field="selectedDay"></dd>
-                </div>
-                <div class="spec-item">
-                    <dt>Passengers</dt>
-                    <dd data-field="passengers"></dd>
-                </div>
-                <div class="spec-item">
-                    <dt>Confirmation</dt>
-                    <dd data-field="confirmationId"></dd>
-                </div>
-                <div class="spec-item">
-                    <dt>Booked On</dt>
-                    <dd data-field="bookingDate"></dd>
-                </div>
-            </dl>
-        </article>
-    </template>
-</section>
-
-<script src="/js/dashboard.js" defer></script>
 
 <%- include('./partials/footer') %>

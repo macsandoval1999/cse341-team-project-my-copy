@@ -3,11 +3,15 @@
 <section class="trains-catalog admin-trips admin-trains train-page">
     <div class="admin-trips-heading trains-hero">
         <h1>Manage Trains</h1>
+        <p class="page-description">Add and review the trains used across the rail network.</p>
         <a href="/admin" class="admin-trips-back">&larr; Back to Admin Dashboard</a>
     </div>
 
     <details class="train-create">
-        <summary>Add a train</summary>
+        <summary>
+            <span class="trip-create-icon" aria-hidden="true">+</span>
+            <span><strong>Add a train</strong><small>Add a train and its details to the fleet.</small></span>
+        </summary>
 
         <!-- The same fields the API accepts. required and min="0" let the browser catch mistakes before any request is sent. -->
         <form id="train-create-form">
@@ -23,16 +27,94 @@
             <label class="admin-trip-field"><span>Best for (optional)</span><input type="text" name="bestFor"></label>
             <label class="admin-trip-field"><span>Description (optional)</span><textarea name="description" rows="3"></textarea></label>
 
-            <div class="admin-trip-actions">
+            <div class="admin-trip-actions train-create-actions">
                 <button type="submit">Add train</button>
             </div>
         </form>
+        <p id="train-create-validation" class="admin-form-validation" role="alert" hidden></p>
     </details>
+
+    <form class="users-controls trains-controls" id="admin-trains-filters" role="search">
+        <label for="admin-trains-search">
+            <span>Search trains</span>
+            <input id="admin-trains-search" type="search" maxlength="100" placeholder="Name, operator, or description">
+        </label>
+        <label for="admin-trains-type">
+            <span>Type</span>
+            <select id="admin-trains-type"><option value="">All types</option></select>
+        </label>
+        <label for="admin-trains-power">
+            <span>Power source</span>
+            <select id="admin-trains-power"><option value="">All power sources</option></select>
+        </label>
+        <label for="admin-trains-sort">
+            <span>Sort by</span>
+            <select id="admin-trains-sort">
+                <option value="name">Name</option>
+                <option value="operator">Operator</option>
+                <option value="maxSpeedKmh">Top speed</option>
+                <option value="capacity">Capacity</option>
+            </select>
+        </label>
+        <label for="admin-trains-order">
+            <span>Order</span>
+            <select id="admin-trains-order">
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+            </select>
+        </label>
+        <div class="users-control-actions">
+            <button type="submit">Search</button>
+            <button type="button" id="admin-trains-reset">Reset</button>
+        </div>
+    </form>
+    <p id="admin-trains-results-count" aria-live="polite"></p>
 
     <p id="admin-trains-message" class="trains-state" role="status" aria-live="polite"></p>
 
     <div class="trains-state" id="admin-trains-loading">Loading trains...</div>
     <div class="trains-grid" id="admin-trains-list"></div>
+    <nav class="users-pagination" id="admin-trains-pagination" aria-label="Train pages" hidden>
+        <button type="button" id="admin-trains-previous">Previous</button>
+        <div class="users-page-links" id="admin-trains-page-links" aria-label="Page numbers"></div>
+        <button type="button" id="admin-trains-next">Next</button>
+    </nav>
+
+    <div class="admin-train-overlay" id="admin-train-overlay" hidden></div>
+    <section class="admin-train-modal" id="admin-train-edit-modal" role="dialog" aria-modal="true" aria-labelledby="admin-train-edit-title" hidden>
+        <h2 id="admin-train-edit-title">Edit train</h2>
+        <form id="admin-train-edit-form">
+            <p id="train-edit-validation" class="admin-form-validation" role="alert" hidden></p>
+            <label class="admin-trip-field"><span>Name</span><input type="text" name="name" required></label>
+            <label class="admin-trip-field"><span>Operator</span><input type="text" name="operator" required></label>
+            <label class="admin-trip-field"><span>Type</span><input type="text" name="type" required></label>
+            <label class="admin-trip-field"><span>Top speed (km/h)</span><input type="number" name="maxSpeedKmh" min="0" step="any" required></label>
+            <label class="admin-trip-field"><span>Capacity (seats)</span><input type="number" name="capacity" min="0" step="1" required></label>
+            <label class="admin-trip-field"><span>Power source</span><input type="text" name="powerSource" required></label>
+            <label class="admin-trip-field"><span>Image URL</span><input type="text" name="imageUrl"></label>
+            <label class="admin-trip-field"><span>Image description</span><input type="text" name="imageAlt"></label>
+            <label class="admin-trip-field"><span>Best for</span><input type="text" name="bestFor"></label>
+            <label class="admin-trip-field admin-train-edit-description"><span>Description</span><textarea name="description" rows="3"></textarea></label>
+            <div class="admin-trip-actions admin-train-modal-actions">
+                <button type="button" class="admin-trip-cancel" data-action="close-modal">Cancel</button>
+                <button type="submit">Save changes</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="admin-train-modal admin-train-trips-modal" id="admin-train-trips-modal" role="dialog" aria-modal="true" aria-labelledby="admin-train-trips-title" hidden>
+        <div class="admin-train-modal-header">
+            <div>
+                <h2 id="admin-train-trips-title">Trips assigned to train</h2>
+                <p id="admin-train-trips-summary"></p>
+            </div>
+            <button type="button" class="admin-train-modal-close" data-action="close-modal" aria-label="Close">×</button>
+        </div>
+        <ul class="admin-train-trips" id="admin-train-trips-list"></ul>
+        <div class="admin-trip-actions admin-train-modal-actions">
+            <button type="button" class="admin-trip-cancel" data-action="close-modal">Close</button>
+        </div>
+    </section>
 
     <template id="admin-train-template">
         <article class="train-card">
@@ -65,34 +147,19 @@
                 </div>
             </dl>
 
-            <h3>Trips on this train</h3>
-            <p data-field="no-trips">No trips use this train.</p>
-            <ul class="admin-train-trips" data-field="trips"></ul>
+            <div class="admin-train-trip-summary">
+                <div>
+                    <h3>Assigned trips</h3>
+                    <p data-field="trip-count"></p>
+                </div>
+                <button type="button" data-action="view-trips">Manage trips</button>
+            </div>
 
             <div class="admin-trip-card-actions">
                 <button type="button" data-action="edit">Edit</button>
                 <button type="button" class="delete-action-btn" data-action="delete">Delete</button>
                 <small data-field="delete-note"></small>
             </div>
-
-            <!-- Editing form. The id is shown but read-only, because trips reference trains by id. -->
-            <form data-field="edit-form" hidden>
-                <label class="admin-trip-field"><span>Name</span><input type="text" name="name" required></label>
-                <label class="admin-trip-field"><span>Operator</span><input type="text" name="operator" required></label>
-                <label class="admin-trip-field"><span>Type</span><input type="text" name="type" required></label>
-                <label class="admin-trip-field"><span>Top speed (km/h)</span><input type="number" name="maxSpeedKmh" min="0" step="any" required></label>
-                <label class="admin-trip-field"><span>Capacity (seats)</span><input type="number" name="capacity" min="0" step="1" required></label>
-                <label class="admin-trip-field"><span>Power source</span><input type="text" name="powerSource" required></label>
-                <label class="admin-trip-field"><span>Image URL</span><input type="text" name="imageUrl"></label>
-                <label class="admin-trip-field"><span>Image description</span><input type="text" name="imageAlt"></label>
-                <label class="admin-trip-field"><span>Best for</span><input type="text" name="bestFor"></label>
-                <label class="admin-trip-field"><span>Description</span><textarea name="description" rows="3"></textarea></label>
-
-                <div class="admin-trip-actions">
-                    <button type="button" class="admin-trip-cancel" data-action="cancel-edit">Cancel</button>
-                    <button type="submit">Save changes</button>
-                </div>
-            </form>
         </article>
     </template>
 

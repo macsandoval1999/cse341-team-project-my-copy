@@ -1,10 +1,10 @@
 <%- include('../partials/header') %>
 
-<article class="route-detail" data-trip-id="<%= details.id %>">
+<article class="route-detail" data-trip-id="<%= details.id %>" data-is-available="<%= availability.isAvailable %>">
   <div class="route-header">
     <div class="route-header-content">
       <h1 class="route-name"><%= details.name %></h1>
-      <p class="route-description"><%= details.description %></p>
+      <p class="route-description page-description"><%= details.description %></p>
 
       <% if (details.highlights && details.highlights.length > 0) { %>
       <div class="highlights">
@@ -21,6 +21,10 @@
     </div>
     <% } %>
   </div>
+
+  <% if (!availability.isAvailable) { %>
+  <p class="booking-availability-notice" role="status"><%= availability.message %> Please check back later.</p>
+  <% } %>
 
   <div class="route-info">
     <div class="info-grid">
@@ -44,17 +48,46 @@
         <span class="info-value season-<%= details.bestSeason %>"><%= details.bestSeason.charAt(0).toUpperCase() + details.bestSeason.slice(1) %></span>
       </div>
 
-      <% if (train) { %>
-      <div class="info-item">
-        <span class="info-label">Your Train</span>
-        <a class="info-value" href="/trains/<%= train.id %>">
-          <% if (train.imageUrl) { %>
-          <img src="<%= train.imageUrl %>" alt="<%= train.imageAlt || train.name %>">
-          <% } %>
-          <%= train.name %>
+      <div class="info-item train-info-item">
+        <span class="info-label">Train</span>
+        <% if (train) { %>
+        <a class="info-value train-info" href="/trains/<%= encodeURIComponent(train.id) %>">
+          <span class="train-visual<%= train.imageUrl ? "" : " is-image-missing" %>">
+            <% if (train.imageUrl) { %>
+            <img class="train-info-image" src="<%= train.imageUrl %>" alt="<%= train.imageAlt || train.name %>">
+            <% } %>
+            <span class="train-info-placeholder" aria-hidden="true">
+              <svg viewBox="0 0 48 48" focusable="false">
+                <path d="M15 7h18a6 6 0 0 1 6 6v19a5 5 0 0 1-5 5H14a5 5 0 0 1-5-5V13a6 6 0 0 1 6-6Z" />
+                <path d="M10 25h28M17 15h14M16 37l-4 5m20-5 4 5M16 32h.01M32 32h.01" />
+              </svg>
+            </span>
+          </span>
+          <span class="train-info-copy">
+            <span class="train-info-name"><%= train.name %></span>
+            <span class="train-info-action">View train details</span>
+          </span>
+          <span class="train-info-arrow" aria-hidden="true">↗</span>
         </a>
+        <% } else { %>
+        <span class="info-value train-info train-info-unavailable">
+          <span class="train-visual is-image-missing" aria-hidden="true">
+            <span class="train-info-placeholder">
+              <svg viewBox="0 0 48 48" focusable="false">
+                <path d="M15 7h18a6 6 0 0 1 6 6v19a5 5 0 0 1-5 5H14a5 5 0 0 1-5-5V13a6 6 0 0 1 6-6Z" />
+                <path d="M10 25h28M17 15h14M16 37l-4 5m20-5 4 5M16 32h.01M32 32h.01" />
+              </svg>
+            </span>
+          </span>
+          <span class="train-info-copy">
+            <span class="train-info-name"><%= details.trainId
+              ? `Train record unavailable (${details.trainId})`
+              : "Train information unavailable" %></span>
+            <span class="train-info-action">Details unavailable</span>
+          </span>
+        </span>
+        <% } %>
       </div>
-      <% } %>
     </div>
 
     <div class="route-stations">

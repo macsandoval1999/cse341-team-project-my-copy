@@ -47,7 +47,14 @@ const deleteUser = async (userId) => {
         return;
     }
 
-    if (!window.confirm(`Delete ${user.name || 'this user'}?`)) {
+    const identifier = user.username || user.email || userId;
+    const identifierLabel = user.username ? "username" : user.email ? "email address" : "user ID";
+    if (!await window.confirmAdminDelete({
+        itemName: "user",
+        identifier,
+        identifierLabel,
+        description: `This permanently deletes ${user.name || user.username || "this user"}. This cannot be undone.`,
+    })) {
         return;
     }
 

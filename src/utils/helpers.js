@@ -1,5 +1,5 @@
 /**
- * Generates a unique Japan Rail like confirmation code for bookings.
+ * Generates a unique Japan Rail-style confirmation code for bookings.
  * @returns {string} A unique confirmation code.
  */
 const generateConfirmationCode = () => {

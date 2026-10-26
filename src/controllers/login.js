@@ -8,10 +8,14 @@ const sendLoginError = (req, res, status, error) => {
         return res.status(status).json({ error });
     }
     const identifier = req.body?.identifier ?? req.body?.email ?? req.body?.username ?? '';
+    let oldIdentifier = '';
+    if (typeof identifier === 'string') {
+        oldIdentifier = identifier;
+    }
     return res.status(status).render('login', {
         title: 'Login',
         loginError: error,
-        oldIdentifier: typeof identifier === 'string' ? identifier : '',
+        oldIdentifier,
     });
 };
 
@@ -29,16 +33,25 @@ export async function login(req, res) {
     }
 
     const identifierValue = req.body?.identifier ?? req.body?.email ?? req.body?.username;
-    const identifier = typeof identifierValue === 'string' ? identifierValue.trim().toLowerCase() : '';
-    const password = typeof req.body?.password === 'string' ? req.body.password : '';
+    let identifier = '';
+    if (typeof identifierValue === 'string') {
+        identifier = identifierValue.trim().toLowerCase();
+    }
+    let password = '';
+    if (typeof req.body?.password === 'string') {
+        password = req.body.password;
+    }
     if (!identifier || !password) {
         return sendLoginError(req, res, 400, 'Username/email and password are required');
     }
 
     try {
-        const user = identifier.includes('@')
-            ? await getUserByEmail(identifier)
-            : await getUserByUsername(identifier);
+        let user;
+        if (identifier.includes('@')) {
+            user = await getUserByEmail(identifier);
+        } else {
+            user = await getUserByUsername(identifier);
+        }
         const isPasswordValid = user && await verifyPassword(password, user.passwordHash);
         if (!isPasswordValid) {
             return sendLoginError(req, res, 401, 'Invalid email or password');
@@ -60,7 +73,10 @@ export async function login(req, res) {
             });
         }
 
-        return res.redirect(hasRole(sessionUser, 'admin') ? '/admin' : '/dashboard');
+        if (hasRole(sessionUser, 'admin')) {
+            return res.redirect('/admin');
+        }
+        return res.redirect('/dashboard');
     } catch (error) {
         console.error('Error during login:', error);
         return sendLoginError(req, res, 500, 'An error occurred during login. Please try again.');

@@ -1,0 +1,110 @@
+<%- include('./partials/header') %>
+
+<section class="schedules-admin trains-catalog">
+    <div class="trains-hero schedules-admin-heading">
+        <h1><%= title %></h1>
+        <div class="schedules-admin-links">
+            <a href="/admin" class="admin-trips-back">&larr; Back to Admin Dashboard</a>
+        </div>
+        <p class="page-description">Manage each trip's operating days and times. Inactivate a schedule to stop bookings without removing its history.</p>
+    </div>
+
+    <details class="schedule-create">
+        <summary>
+            <span class="trip-create-icon" aria-hidden="true">+</span>
+            <span><strong>Add a schedule</strong><small>Choose the trip it belongs to, then set its times and operating days.</small></span>
+        </summary>
+        <form id="schedule-create-form">
+            <label><span>Trip</span><select name="tripId" id="schedule-create-trip" required>
+                <option value="" disabled selected>Loading trips…</option>
+            </select></label>
+            <label><span>Departure</span><input type="time" name="departureTime" required></label>
+            <label><span>Arrival</span><input type="time" name="arrivalTime" required></label>
+            <fieldset class="schedule-days" aria-describedby="schedule-create-days-error">
+                <legend>Operating days</legend>
+                <% [["monday","Mon"],["tuesday","Tue"],["wednesday","Wed"],["thursday","Thu"],["friday","Fri"],["saturday","Sat"],["sunday","Sun"]].forEach(([day,label]) => { %>
+                    <label><input type="checkbox" name="daysOfWeek" value="<%= day %>"><%= label %></label>
+                <% }); %>
+            </fieldset>
+            <p id="schedule-create-days-error" class="admin-form-validation" role="alert" hidden></p>
+            <label class="schedule-active-toggle"><input type="checkbox" name="status" checked> Active for booking</label>
+            <div class="schedule-create-actions">
+                <button type="reset" class="schedule-secondary">Clear</button>
+                <button type="submit" disabled>Add schedule</button>
+            </div>
+        </form>
+    </details>
+    <p id="schedule-admin-message" class="schedule-admin-message" role="status" aria-live="polite" hidden></p>
+
+    <details class="schedule-coverage">
+        <summary class="schedule-coverage-summary">
+            <span class="trip-create-icon" aria-hidden="true">+</span>
+            <span class="schedule-coverage-summary-copy">
+                <strong id="schedule-coverage-title">Trips with no schedules</strong>
+                <small>These trips have no schedule records. Add a schedule to make them bookable.</small>
+            </span>
+            <span id="missing-trip-count" class="schedule-coverage-count" aria-live="polite"></span>
+        </summary>
+        <div class="schedule-coverage-content">
+            <p id="missing-trips-state" class="trains-state" role="status">Loading trip coverage…</p>
+            <div id="missing-trips-list" class="schedule-missing-table-wrap"></div>
+        </div>
+    </details>
+
+    <section class="schedule-catalog" aria-labelledby="schedule-catalog-title">
+        <h2 id="schedule-catalog-title">All schedules</h2>
+        <form class="users-controls schedule-admin-controls" id="schedule-filters" role="search">
+            <label class="users-search-control" for="schedule-search">
+                <span>Search</span>
+                <input id="schedule-search" type="search" maxlength="100" placeholder="Trip, time, or weekday">
+            </label>
+            <label for="schedule-trip-filter"><span>Trip</span>
+                <select id="schedule-trip-filter"><option value="">All trips</option></select>
+            </label>
+            <label for="schedule-day-filter"><span>Operating day</span>
+                <select id="schedule-day-filter">
+                    <option value="">All days</option>
+                    <% [["monday","Monday"],["tuesday","Tuesday"],["wednesday","Wednesday"],["thursday","Thursday"],["friday","Friday"],["saturday","Saturday"],["sunday","Sunday"]].forEach(([day,label]) => { %>
+                        <option value="<%= day %>"><%= label %></option>
+                    <% }); %>
+                </select>
+            </label>
+            <label for="schedule-status-filter"><span>Status</span>
+                <select id="schedule-status-filter">
+                    <option value="">All schedules</option>
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                </select>
+            </label>
+            <label for="schedule-sort"><span>Sort by</span>
+                <select id="schedule-sort">
+                    <option value="tripId">Trip</option>
+                    <option value="departureTime">Departure</option>
+                    <option value="arrivalTime">Arrival</option>
+                    <option value="id">Schedule ID</option>
+                </select>
+            </label>
+            <label for="schedule-order"><span>Order</span>
+                <select id="schedule-order">
+                    <option value="asc">Ascending</option>
+                    <option value="desc">Descending</option>
+                </select>
+            </label>
+            <div class="users-control-actions">
+                <button type="submit">Search</button>
+                <button type="button" id="schedule-reset">Reset</button>
+            </div>
+        </form>
+        <p id="schedule-results-count" class="booking-results-count" aria-live="polite"></p>
+        <p id="schedule-list-state" class="trains-state" role="status" hidden></p>
+        <div id="schedule-list" class="schedule-admin-list"></div>
+        <nav id="schedule-pagination" class="users-pagination" aria-label="Schedule pages" hidden>
+            <button type="button" id="schedule-previous">Previous</button>
+            <div class="users-page-links" id="schedule-page-links" aria-label="Page numbers"></div>
+            <button type="button" id="schedule-next">Next</button>
+        </nav>
+    </section>
+</section>
+
+<script src="/js/schedules-admin.js" defer></script>
+<%- include('./partials/footer') %>

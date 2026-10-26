@@ -66,6 +66,10 @@
     min-height: 7rem;
 }
 
+.admin-trip-field select[multiple] option {
+    padding: 0.25rem;
+}
+
 .admin-trip-field small {
     color: #45574e;
     font-weight: 400;
@@ -73,6 +77,126 @@
 
 .admin-trips-error {
     color: #8e3029;
+}
+
+.trip-create-success {
+    color: #245d40;
+    font-weight: 600;
+}
+
+.trip-create {
+    margin: 0 0 var(--space-lg);
+    padding: var(--space-md);
+    border: 1px solid #b7c4e8;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, #fff 0%, #f4f7ff 100%);
+    box-shadow: var(--shadow-sm);
+
+    summary {
+        display: flex;
+        align-items: center;
+        gap: var(--space-md);
+        color: var(--clr-text-primary);
+        cursor: pointer;
+        list-style: none;
+
+        &::-webkit-details-marker {
+            display: none;
+        }
+
+        strong,
+        small {
+            display: block;
+        }
+
+        strong {
+            font-size: var(--font-size-md);
+        }
+
+        small {
+            margin-top: var(--space-xs);
+            color: var(--clr-text-secondary);
+            font-weight: 400;
+        }
+    }
+}
+
+.trip-create-icon {
+    display: grid;
+    flex: 0 0 2.5rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border-radius: 50%;
+    background: #e5eefb;
+    color: #295d49;
+    font-size: 1.5rem;
+    font-weight: 500;
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+details[open] .trip-create-icon {
+    transform: rotate(45deg);
+    background: #dce8fa;
+}
+
+#trip-create-form {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+    padding-top: var(--space-lg);
+    border-top: 1px solid #d5dfef;
+
+    .trip-create-description,
+    .trip-create-actions {
+        grid-column: 1 / -1;
+    }
+
+    select[multiple] {
+        min-height: 8rem;
+    }
+
+    textarea {
+        max-width: none;
+    }
+}
+
+#trip-create-form > .admin-trip-field {
+    align-self: start;
+}
+
+.trip-create-schedule {
+    grid-column: 1 / -1;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.trip-create-schedule .trip-schedule-editor-heading,
+.trip-create-schedule .trip-schedule-days {
+    grid-column: 1 / -1;
+}
+
+.trip-create-schedule > label {
+    display: grid;
+    gap: 0.3rem;
+    color: #1d2924;
+    font-weight: 600;
+}
+
+.trip-create-schedule input[type="time"] {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 2.5rem;
+    padding: 0.4rem 0.55rem;
+    border: 1px solid #9aaca3;
+    border-radius: 3px;
+    background: #fff;
+    color: #1d2924;
+    font: inherit;
+}
+
+.trip-create-actions {
+    justify-content: flex-end;
 }
 
 .admin-trip-overlay {
@@ -87,7 +211,7 @@
     z-index: 21;
     inset: 50% auto auto 50%;
     box-sizing: border-box;
-    width: min(32rem, calc(100vw - 2rem));
+    width: min(56rem, calc(100vw - 2rem));
     max-height: calc(100vh - 2rem);
     overflow-y: auto;
     padding: 1.5rem;
@@ -112,6 +236,137 @@
 #admin-edit-form {
     display: grid;
     gap: 1rem;
+}
+
+.trip-schedule-editor {
+    display: grid;
+    gap: 0.85rem;
+    padding: 1rem;
+    border: 1px solid #d5dfef;
+    border-radius: 4px;
+    background: #f7f9fc;
+}
+
+.trip-schedule-editor-heading h3,
+.trip-schedule-create-form h4,
+.trip-schedule-row h4 {
+    margin: 0;
+}
+
+.trip-schedule-editor-heading p,
+.trip-schedules-empty {
+    margin: 0.35rem 0 0;
+    color: #45574e;
+}
+
+.trip-schedule-list {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.trip-schedule-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+    gap: 0.7rem;
+    padding: 0.85rem;
+    border: 1px solid #d5dfef;
+    border-radius: 4px;
+    background: #fff;
+}
+
+.trip-schedule-row h4,
+.trip-schedule-days {
+    grid-column: 1 / -1;
+}
+
+.trip-schedule-row label,
+.trip-schedule-create-form > label {
+    display: grid;
+    gap: 0.3rem;
+    color: #1d2924;
+    font-weight: 600;
+}
+
+.trip-schedule-row input[type="time"],
+.trip-schedule-create-form input[type="time"] {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 2.5rem;
+    padding: 0.4rem 0.55rem;
+    border: 1px solid #9aaca3;
+    border-radius: 3px;
+    background: #fff;
+    color: #1d2924;
+    font: inherit;
+}
+
+.trip-schedule-days {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.8rem;
+    margin: 0;
+    padding: 0.6rem;
+    border: 1px solid #d5dfef;
+}
+
+.trip-schedule-days legend {
+    padding: 0 0.25rem;
+    font-weight: 600;
+}
+
+.trip-schedule-days label,
+.trip-schedule-active,
+.trip-schedule-create-form fieldset label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    font-weight: 400;
+}
+
+.trip-schedule-row button,
+.trip-schedule-create-form > button {
+    min-height: 2.5rem;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid #295d49;
+    border-radius: 3px;
+    background: #295d49;
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+}
+
+.trip-schedule-create-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: end;
+    gap: 0.7rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid #d5dfef;
+}
+
+.trip-schedule-create-form h4,
+.trip-schedule-create-form fieldset,
+.trip-schedule-create-form > button {
+    grid-column: 1 / -1;
+}
+
+.trip-schedule-create-form fieldset {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.8rem;
+    margin: 0;
+    padding: 0.6rem;
+    border: 1px solid #d5dfef;
+}
+
+#trip-schedule-status {
+    margin: 0;
+    color: #245d40;
+}
+
+#trip-schedule-status.is-error {
+    color: #8e3029;
 }
 
 .admin-trip-actions,
@@ -210,4 +465,37 @@
         grid-template-columns: 1fr;
     }
 
+    #trip-create-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 440px) {
+    #trip-create-form {
+        grid-template-columns: 1fr;
+
+        .trip-create-description,
+        .trip-create-actions {
+            grid-column: auto;
+        }
+    }
+
+    .trip-schedule-row,
+    .trip-schedule-create-form,
+    .trip-create-schedule {
+        grid-template-columns: 1fr;
+    }
+
+    .trip-schedule-row h4,
+    .trip-schedule-days,
+    .trip-schedule-create-form h4,
+    .trip-schedule-create-form fieldset,
+    .trip-schedule-create-form > button {
+        grid-column: auto;
+    }
+
+    .trip-create-schedule .trip-schedule-editor-heading,
+    .trip-create-schedule .trip-schedule-days {
+        grid-column: auto;
+    }
 }

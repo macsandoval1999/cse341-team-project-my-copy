@@ -9,8 +9,15 @@ import {
 import {
     getTripById as findTripById,
     getTripsByTrainId as findTripsByTrainId,
+    getPaginatedTrips as findPaginatedTrips,
     updateTripTrain as changeTripTrain,
 } from "../models/trips.js";
+import {
+    createListResponse,
+    escapeRegExp,
+    parseListQuery,
+    parseOptionalFilters,
+} from "../utils/list-query.js";
 
 export const trainsPage = (req, res) => {
     res.render("trains", { title: "Trains" });
@@ -28,86 +35,24 @@ export const trainsAdminPage = (req, res) => {
     res.render("trains-admin", { title: "Manage Trains" });
 };
 
-const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-const parsePositiveInteger = (value, defaultValue) => {
-    if (value === undefined) {
-        return defaultValue;
-    }
-
-    const parsed = Number(value);
-    if (!Number.isInteger(parsed) || parsed < 1) {
-        return null;
-    }
-
-    return parsed;
-};
-
-const parseOptionalString = (value, fieldName, { maxLength } = {}) => {
-    if (value === undefined) {
-        return { value: null, error: null };
-    }
-
-    if (typeof value !== 'string') {
-        return { value: null, error: `${fieldName} must be a single string value.` };
-    }
-
-    const trimmed = value.trim();
-
-    if (!trimmed || (maxLength && trimmed.length > maxLength)) {
-        return {
-            value: null,
-            error: maxLength
-                ? `${fieldName} must be between 1 and ${maxLength} characters.`
-                : `${fieldName} must not be empty.`
-        };
-    }
-
-    return { value: trimmed, error: null };
-};
-
 export async function getAllTrains(req, res) {
     try {
-        const page = parsePositiveInteger(req.query.page, 1);
-        const requestedLimit = parsePositiveInteger(req.query.limit, 10);
-
-        if (!page || !requestedLimit || requestedLimit > 50) {
+        const options = parseListQuery(req.query, allowedSortFields, "name");
+        if (options.errors.length > 0) {
             return res.status(400).json({
-                errors: [
-                    {
-                        field: "pagination",
-                        message:
-                            "page and limit must be positive integers, and limit cannot exceed 50.",
-                    },
-                ],
+                errors: options.errors,
             });
         }
-
-        const limit = requestedLimit;
-
-        if (req.query.sort && !allowedSortFields.includes(req.query.sort)) {
-            return res.status(400).json({
-                errors: [{ field: "sort", message: "sort is not supported." }],
-            });
+        const { page, limit, sort, order } = options;
+        const filters = parseOptionalFilters(req.query, {
+            q: { maxLength: 100 },
+            type: {},
+            powerSource: {},
+        });
+        if (filters.errors.length > 0) {
+            return res.status(400).json({ errors: filters.errors });
         }
-
-        const sort = req.query.sort || "name";
-        const order = req.query.order === "desc" ? -1 : 1;
-
-        const q = parseOptionalString(req.query.q, 'q', { maxLength: 100 });
-        if (q.error) {
-            return res.status(400).json({ errors: [{ field: 'q', message: q.error }] });
-        }
-
-        const type = parseOptionalString(req.query.type, 'type');
-        if (type.error) {
-            return res.status(400).json({ errors: [{ field: 'type', message: type.error }] });
-        }
-
-        const powerSource = parseOptionalString(req.query.powerSource, 'powerSource');
-        if (powerSource.error) {
-            return res.status(400).json({ errors: [{ field: 'powerSource', message: powerSource.error }] });
-        }
+        const { q, type, powerSource } = filters.values;
 
         const filter = {};
         if (q.value) {
@@ -134,22 +79,19 @@ export async function getAllTrains(req, res) {
             order,
         });
 
-        return res.status(200).json({
+        return res.status(200).json(createListResponse({
             data: trains,
+            page,
+            limit,
+            totalItems,
+            sort,
+            order,
             query: {
                 q: q.value,
                 type: type.value,
-                powerSource: powerSource.value
+                powerSource: powerSource.value,
             },
-            pagination: {
-                page,
-                limit,
-                totalItems,
-                totalPages: Math.ceil(totalItems / limit),
-                hasNextPage: page * limit < totalItems,
-                hasPreviousPage: page > 1,
-            },
-        });
+        }));
     } catch (error) {
         console.error("Error fetching trains:", error);
 
@@ -207,9 +149,52 @@ export async function getTripsByTrain(req, res) {
             });
         }
 
-        const trips = await findTripsByTrainId(id);
-
-        return res.status(200).json({ trips });
+        const options = parseListQuery(
+            req.query,
+            ["name", "region", "distance", "bestSeason"],
+            "name"
+        );
+        if (options.errors.length > 0) {
+            return res.status(400).json({ errors: options.errors });
+        }
+        const filters = parseOptionalFilters(req.query, {
+            region: {},
+            season: {},
+            q: { maxLength: 100 },
+        });
+        if (filters.errors.length > 0) {
+            return res.status(400).json({ errors: filters.errors });
+        }
+        const { region, season, q } = filters.values;
+        const filter = { trainId: id };
+        if (region.value) {
+            filter.region = { $regex: `^${escapeRegExp(region.value)}$`, $options: "i" };
+        }
+        if (season.value) {
+            filter.bestSeason = { $regex: `^${escapeRegExp(season.value)}$`, $options: "i" };
+        }
+        if (q.value) {
+            const pattern = escapeRegExp(q.value);
+            filter.$or = [
+                { name: { $regex: pattern, $options: "i" } },
+                { description: { $regex: pattern, $options: "i" } },
+            ];
+        }
+        const { trips, totalItems } = await findPaginatedTrips({
+            filter,
+            ...options,
+        });
+        const response = createListResponse({
+            data: trips,
+            ...options,
+            totalItems,
+            query: {
+                region: region.value,
+                season: season.value,
+                q: q.value,
+            },
+        });
+        return res.status(200).json({ ...response, trips });
     } catch (error) {
         console.error("Error fetching trips for train:", error);
 
@@ -226,7 +211,10 @@ const editableTrainFields = [...requiredTrainFields, ...optionalTrainFields];
 
 // Express leaves req.body undefined when a request has no JSON body
 const getBody = (req) => {
-    return req.body && typeof req.body === "object" && !Array.isArray(req.body) ? req.body : {};
+    if (req.body && typeof req.body === "object" && !Array.isArray(req.body)) {
+        return req.body;
+    }
+    return {};
 };
 
 /*
@@ -236,13 +224,17 @@ Returns a list of { field, message } errors, which is empty when the body is val
 */
 const validateTrainBody = (body, { isNew }) => {
     const errors = [];
-    const allowedFields = isNew ? ["id", ...editableTrainFields] : editableTrainFields;
+    let allowedFields = editableTrainFields;
+    if (isNew) {
+        allowedFields = ["id", ...editableTrainFields];
+    }
 
     for (const field of Object.keys(body)) {
         if (!allowedFields.includes(field)) {
-            const message = field === "id"
-                ? "id can't be changed once a train exists."
-                : `${field} is not a train field.`;
+            let message = `${field} is not a train field.`;
+            if (field === "id") {
+                message = "id can't be changed once a train exists.";
+            }
             errors.push({ field, message });
         }
     }

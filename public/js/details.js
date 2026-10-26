@@ -36,11 +36,24 @@ const createScheduleCard = (schedule) => {
         days.appendChild(badge);
     });
 
-    const bookingLink = document.createElement("a");
-    bookingLink.href = `/trips/booking/${encodeURIComponent(schedule.id)}`;
-    bookingLink.className = "book-btn";
-    bookingLink.textContent = "Book Now";
-    card.append(times, days, bookingLink);
+    const details = document.querySelector(".route-detail");
+    const isAvailable =
+        details?.dataset.isAvailable !== "false" && schedule.status !== false;
+    if (isAvailable) {
+        const bookingLink = document.createElement("a");
+        bookingLink.href = `/trips/booking/${encodeURIComponent(schedule.id)}`;
+        bookingLink.className = "book-btn";
+        bookingLink.textContent = "Book Now";
+        card.append(times, days, bookingLink);
+    } else {
+        const unavailableButton = document.createElement("button");
+        unavailableButton.type = "button";
+        unavailableButton.className = "book-btn book-btn-unavailable";
+        unavailableButton.disabled = true;
+        unavailableButton.textContent =
+            schedule.status === false ? "Schedule inactive" : "Temporarily unavailable";
+        card.append(times, days, unavailableButton);
+    }
 
     return card;
 };
@@ -72,9 +85,10 @@ const loadSchedules = async (
             throw new Error(`Request failed with status ${response.status}`);
         }
 
-        const schedules = await response.json();
+        const payload = await response.json();
+        const schedules = payload.data || [];
 
-        if (!Array.isArray(schedules) || schedules.length === 0) {
+        if (schedules.length === 0) {
             scheduleStatus.textContent =
                 "No schedules are available for the selected month.";
             return;
@@ -105,6 +119,23 @@ const initializeScheduleList = () => {
         loadSchedules(tripId, monthSelect, scheduleGrid, scheduleStatus);
     });
     loadSchedules(tripId, monthSelect, scheduleGrid, scheduleStatus);
+};
+
+const initializeTrainImage = () => {
+    const image = document.querySelector(".train-info-image");
+    if (!image) {
+        return;
+    }
+
+    const showPlaceholder = () => {
+        image.closest(".train-visual")?.classList.add("is-image-missing");
+        image.remove();
+    };
+
+    image.addEventListener("error", showPlaceholder, { once: true });
+    if (image.complete && image.naturalWidth === 0) {
+        showPlaceholder();
+    }
 };
 
 const renderStationInfo = (station, popupBody) => {
@@ -195,6 +226,7 @@ const initializeStationPopup = () => {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
+    initializeTrainImage();
     initializeScheduleList();
     initializeStationPopup();
 });

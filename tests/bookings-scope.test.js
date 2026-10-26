@@ -77,6 +77,11 @@ describe("personal and admin bookings views", () => {
 
         const dashboard = await agent.get("/dashboard");
         expect(dashboard.text).toContain('href="/bookings">View Your Bookings</a>');
+        expect(dashboard.text).not.toContain('id="dashboard-bookings"');
+        expect(dashboard.text).not.toContain("Loading your bookings");
+        expect(dashboard.text).toContain("<title>Kizuna Rail | Dashboard</title>");
+        expect(dashboard.text).toContain('class="brand-name">Kizuna Rail</span>');
+        expect(dashboard.text).toContain("Manage your account and find your trip and booking tools.");
 
         const page = await agent.get("/bookings");
         expect(page.status).toBe(200);
@@ -116,6 +121,12 @@ describe("personal and admin bookings views", () => {
         expect(page.status).toBe(200);
         expect(page.text).toContain("Manage Bookings");
         expect(page.text).toContain('data-bookings-scope="all"');
+        expect(page.text.indexOf('for="booking-search"'))
+            .toBeLessThan(page.text.indexOf('for="booking-trip-id"'));
+        expect(page.text).toContain('id="booking-filter-form"');
+        expect(page.text).toContain('id="booking-reset"');
+        expect(page.text).toContain('id="booking-page-links"');
+        expect(page.text).toContain('<option value="createdAt">Booking date</option>');
 
         const response = await agent.get("/api/bookings_paginated");
         expect(response.status).toBe(200);

@@ -1,6 +1,13 @@
 <%- include('./partials/header') %>
 <section class="trains-hero users-hero">
     <h1><%= title %></h1>
+    <p class="page-description">
+        <% if (isAdminList) { %>
+            Search user accounts and manage their access to Kizuna Rail.
+        <% } else { %>
+            Review and update your account information.
+        <% } %>
+    </p>
     <% if (isAdmin) { %>
         <a href="/admin" class="admin-trips-back">&larr; Back to Admin Dashboard</a>
     <% } %>

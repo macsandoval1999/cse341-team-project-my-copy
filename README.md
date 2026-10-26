@@ -61,12 +61,15 @@ This repository is set up as a **GitHub template**. Use the template feature to 
 5. Install dependencies: `npm install`
 6. Copy `.env.example` to `.env` and set `MONGODB_URI` (and optionally `MONGODB_DB_NAME`) for your MongoDB instance.
 7. Import the starter data with `npm run db:import`. This replaces the starter collections and clears any confirmations in that database.
+   If starter trips are missing schedules later, run `npm run db:repair-schedules`. This add-only repair restores known starter schedules only for existing starter trips with no schedules; it does not replace or delete existing data. It reports other trips without an active schedule for administrators to configure in Manage Trips.
 8. Run the automated tests with `npm test`. Tests use a temporary local database and do not change the database in your `.env` file.
 9. Start the development server: `npm run dev`
 
 The first test run may take longer because MongoDB Memory Server needs to download a MongoDB program. Later test runs reuse that download. Use `npm run test:watch` if you want Vitest to rerun related tests while you work.
 
 Express sessions are stored in the same MongoDB database as the application. Set `SESSION_SECRET` in your local `.env` and in Render's environment variables; use a distinct strong value for each environment.
+
+Trips must have at least one active schedule to be bookable. Create trips with an initial schedule in Manage Trips; use the Schedule coverage filter and Manage schedules action to find and configure older trips. The dedicated Manage Schedules page provides a full schedule list, filters, editing, active/inactive controls, creation, and a live list of trips missing active schedules. Trips without active schedules remain visible but cannot be booked.
 
 ### Automated Test Setup
 

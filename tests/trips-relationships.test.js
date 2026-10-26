@@ -50,7 +50,7 @@ describe("GET /api/trips/:id station relationships", () => {
         // Assert
         expect(tripResponse.status).toBe(200);
         expect(stationsResponse.status).toBe(200);
-        const stationIds = stationsResponse.body.map((station) => station.id);
+        const stationIds = stationsResponse.body.data.map((station) => station.id);
         expect(stationIds).toContain(tripResponse.body.startStation);
         expect(stationIds).toContain(tripResponse.body.endStation);
     });
@@ -109,11 +109,27 @@ describe("GET /api/trips/:tripId/schedules schedule relationships", () => {
         // Assert
         expect(response.status).toBe(200);
         expect(response.headers["content-type"]).toContain("application/json");
-        expect(response.body).toBeInstanceOf(Array);
-        expect(response.body.map((schedule) => schedule.id)).toEqual([1, 2]);
+        expect(response.body.data).toBeInstanceOf(Array);
+        expect(response.body.data.map((schedule) => schedule.id)).toEqual([1, 2]);
         expect(
-            response.body.every((schedule) => schedule.tripId === tripId)
+            response.body.data.every((schedule) => schedule.tripId === tripId)
         ).toBe(true);
+    });
+
+    test("paginates and filters schedules for the selected trip", async () => {
+        const response = await request(app)
+            .get("/api/trips/alpine-panorama/schedules")
+            .query({ day: "monday", limit: 1, sort: "departureTime", order: "desc" });
+
+        expect(response.status).toBe(200);
+        expect(response.body.data).toHaveLength(1);
+        expect(response.body.data[0].tripId).toBe("alpine-panorama");
+        expect(response.body.data[0].daysOfWeek).toContain("monday");
+        expect(response.body).toMatchObject({
+            query: { tripId: "alpine-panorama", day: "monday" },
+            sort: { field: "departureTime", order: "desc" },
+            pagination: { page: 1, limit: 1, totalItems: 2, hasNextPage: true },
+        });
     });
 
     // 3. Test that an unknown trip returns a not-found response
@@ -129,7 +145,7 @@ describe("GET /api/trips/:tripId/schedules schedule relationships", () => {
         // Assert
         expect(response.status).toBe(404);
         expect(response.body.error).toContain("not found");
-        expect(response.body).not.toBeInstanceOf(Array);
+        expect(response.body).not.toHaveProperty("data");
     });
 
     // 4. Test that the trip schedule endpoint rejects an invalid month

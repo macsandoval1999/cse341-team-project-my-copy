@@ -1,22 +1,10 @@
 const regionFilter = document.getElementById('region-filter');
 const seasonFilter = document.getElementById('season-filter');
-const normalizeFilterValue = (value) => String(value || '').trim().toLowerCase();
-
-/*
-const populateFilterOptions = (select, values, label) => {
-    const defaultOption = document.createElement('option');
-    defaultOption.value = 'all';
-    defaultOption.textContent = label;
-    select.replaceChildren(defaultOption);
-
-    [...new Set(values.map(normalizeFilterValue).filter(Boolean))].sort().forEach((value) => {
-        const option = document.createElement('option');
-        option.value = value;
-        option.textContent = value.charAt(0).toUpperCase() + value.slice(1);
-        select.appendChild(option);
-    });
-};
-*/
+const availabilityFilter = document.getElementById('availability-filter');
+const searchInput = document.getElementById('trip-search');
+const sortField = document.getElementById('trip-sort');
+const sortOrder = document.getElementById('trip-order');
+let activeFilters = null;
 
 const renderTrips = (trips) => {
     const tripsList = document.getElementById('trips-list');
@@ -35,6 +23,13 @@ const renderTrips = (trips) => {
         card.querySelector('.trip-duration').textContent = trip.duration || '';
         card.querySelector('.trip-distance').textContent = trip.distance ?? '';
         card.querySelector('.route-description').textContent = trip.description || '';
+        const isAvailable = trip.availability?.isAvailable !== false;
+        if (!isAvailable) {
+            const detailsLink = card.querySelector('.view-details-btn');
+            detailsLink.textContent = 'Temporarily unavailable · View details';
+            detailsLink.classList.add('view-details-unavailable');
+            wrapper.classList.add('temporarily-unavailable');
+        }
 
         const seasonBadge = card.querySelector('.season-badge');
         seasonBadge.textContent = trip.bestSeason ? `Best in ${trip.bestSeason}` : '';
@@ -55,72 +50,24 @@ const renderTrips = (trips) => {
     tripsList.replaceChildren(fragment);
 };
 
-/*
-const applyFilters = () => {
-    const cards = document.querySelectorAll('#trips-list .route-card');
-    const selectedRegion = normalizeFilterValue(regionFilter.value);
-    const selectedSeason = normalizeFilterValue(seasonFilter.value);
-    let visibleCount = 0;
-
-    cards.forEach((card) => {
-        const cardRegion = normalizeFilterValue(card.querySelector('.route-region').textContent);
-        const bestSeason = normalizeFilterValue(card.querySelector('.season-badge').textContent);
-        const matchesRegion = selectedRegion === 'all' || cardRegion === selectedRegion;
-        const matchesSeason = selectedSeason === 'all' || bestSeason.includes(selectedSeason);
-        card.hidden = !(matchesRegion && matchesSeason);
-        if (!card.hidden) visibleCount += 1;
-    });
-
-    document.getElementById('trips-empty')?.remove();
-    if (cards.length > 0 && visibleCount === 0) {
-        const emptyState = document.createElement('p');
-        emptyState.id = 'trips-empty';
-        emptyState.className = 'trips-empty';
-        emptyState.textContent = 'No trips match the selected filters.';
-        document.getElementById('trips-list').appendChild(emptyState);
-    }
-};
-
-*/
-
 const loadTrips = async (page = 1) => {
     const tripsList = document.getElementById('trips-list');
 
     try {
         const params = new URLSearchParams({
-            page,
-            region: regionFilter.value,
-            season: seasonFilter.value
+            page: String(page),
+            limit: '10',
+            sort: activeFilters.sort,
+            order: activeFilters.order,
         });
-        const response = await fetch(`/api/trips?${params}`);
+        if (activeFilters.region !== 'all') params.set('region', activeFilters.region);
+        if (activeFilters.season !== 'all') params.set('season', activeFilters.season);
+        if (activeFilters.availability !== 'all') {
+            params.set('availability', activeFilters.availability);
+        }
+        if (activeFilters.search) params.set('search', activeFilters.search);
+        const response = await fetch(`/api/trips?${params.toString()}`);
         if (!response.ok) throw new Error(`Trip request failed (${response.status})`);
-
-        /*
-        const payload = await response.json();
-        const trips = Array.isArray(payload) ? payload : payload.data || payload.trips || [];
-        populateFilterOptions(regionFilter, trips.map((trip) => trip.region), 'All Regions');
-        populateFilterOptions(seasonFilter, trips.map((trip) => trip.bestSeason), 'Any Season');
-        renderTrips(trips);
-
-        const query = new URLSearchParams(window.location.search);
-        const queryRegion = normalizeFilterValue(query.get('region'));
-        const querySeason = normalizeFilterValue(query.get('season'));
-        if ([...regionFilter.options].some((option) => option.value === queryRegion)) {
-            regionFilter.value = queryRegion;
-        }
-        if ([...seasonFilter.options].some((option) => option.value === querySeason)) {
-            seasonFilter.value = querySeason;
-        }
-        applyFilters();
-    } catch (error) {
-        console.error('Unable to load trips:', error);
-        const errorMessage = document.createElement('p');
-        errorMessage.className = 'error';
-        errorMessage.textContent = 'Failed to render trips.';
-        tripsList.replaceChildren(errorMessage);
-    }
-
-    */
 
         const { data, pagination } = await response.json();
 
@@ -128,76 +75,116 @@ const loadTrips = async (page = 1) => {
             const empty = document.createElement('p');
             empty.textContent = 'No trips found';
             tripsList.replaceChildren(empty);
-        }else {
+        } else {
             renderTrips(data);
         }
 
         renderPagination(pagination);
+        document.getElementById('trips-results-count').textContent =
+            pagination.totalItems === 0
+                ? 'No trips to display'
+                : `Showing ${(pagination.page - 1) * pagination.limit + 1}-${Math.min(pagination.page * pagination.limit, pagination.totalItems)} of ${pagination.totalItems} trips`;
 
-    }catch (error) {
+    } catch (error) {
         console.error('Unable to load trips:', error);
         const errorMessage = document.createElement('p');
         errorMessage.className = 'error';
         errorMessage.textContent = 'Failed to render trips.';
         tripsList.replaceChildren(errorMessage);
-        document.getElementById('pagination').replaceChildren();
+        const pagination = document.getElementById('pagination');
+        pagination.replaceChildren();
+        pagination.hidden = true;
     }
-};
-
-// Builds [1, '...', 4, 5, 6, '...', 20]
-const getPageItems = (current, total) => {
-    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-
-    const pages = [...new Set([1, total, current - 1, current, current + 1])]
-        .filter((p) => p >= 1 && p <= total)
-        .sort((a, b) => a - b);
-
-    const items = [];
-    pages.forEach((p, i) => {
-        if (i > 0 && p - pages[i - 1] > 1) items.push('...');
-        items.push(p);
-    });
-    return items;
 };
 
 const renderPagination = ({ page, totalPages, hasPreviousPage, hasNextPage }) => {
     const nav = document.getElementById('pagination');
-    nav.replaceChildren();
-    if (totalPages <= 1) return;
+    const pageLinks = document.getElementById('trips-page-links');
+    const previousButton = document.getElementById('trips-previous');
+    const nextButton = document.getElementById('trips-next');
+    nav.hidden = totalPages <= 1;
+    previousButton.disabled = !hasPreviousPage;
+    nextButton.disabled = !hasNextPage;
+    pageLinks.replaceChildren();
+    previousButton.onclick = () => loadTrips(page - 1);
+    nextButton.onclick = () => loadTrips(page + 1);
+    if (nav.hidden) return;
 
-    const addButton = (label, targetPage, disabled = false, isCurrent = false) => {
+    const addButton = (targetPage, isCurrent = false) => {
         const btn = document.createElement('button');
         btn.type = 'button';
-        btn.textContent = label;
-        btn.disabled = disabled;
+        btn.textContent = String(targetPage);
+        btn.setAttribute('aria-label', `Page ${targetPage}`);
         if (isCurrent) btn.setAttribute('aria-current', 'page');
         btn.addEventListener('click', async () => {
             await loadTrips(targetPage);
             document.getElementById('trips-list').scrollIntoView({ behavior: 'smooth' });
         });
-        nav.appendChild(btn);
+        pageLinks.appendChild(btn);
     };
 
-    addButton('Previous', page - 1, !hasPreviousPage);
-    getPageItems(page, totalPages).forEach((item) => {
-        if (item === '...') {
+    const visiblePages = [...new Set([
+        1,
+        page - 1,
+        page,
+        page + 1,
+        totalPages,
+    ])]
+        .filter((number) => number >= 1 && number <= totalPages)
+        .sort((left, right) => left - right);
+    let previousPage = 0;
+    visiblePages.forEach((pageNumber) => {
+        if (pageNumber - previousPage > 1) {
             const gap = document.createElement('span');
+            gap.className = 'users-page-ellipsis';
             gap.textContent = '…';
-            nav.appendChild(gap);
-        } else {
-            addButton(String(item), item, item === page, item === page);
+            gap.setAttribute('aria-hidden', 'true');
+            pageLinks.appendChild(gap);
         }
+        addButton(pageNumber, pageNumber === page);
+        previousPage = pageNumber;
     });
-    addButton('Next', page + 1, !hasNextPage);
 };
 
-/*
-regionFilter.addEventListener('change', applyFilters);
-seasonFilter.addEventListener('change', applyFilters);
-*/
+const filtersForm = document.getElementById('filters');
+const captureFilters = () => ({
+    region: regionFilter.value,
+    season: seasonFilter.value,
+    availability: availabilityFilter.value,
+    search: searchInput.value.trim(),
+    sort: sortField.value,
+    order: sortOrder.value,
+});
 
-// Filters are applied by the API, so changing one returns to page 1.
-regionFilter.addEventListener('change', () => loadTrips(1));
-seasonFilter.addEventListener('change', () => loadTrips(1));
+filtersForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+    activeFilters = captureFilters();
+    loadTrips(1);
+});
 
-loadTrips();
+document.getElementById('trips-reset').addEventListener('click', () => {
+    filtersForm.reset();
+    activeFilters = captureFilters();
+    loadTrips(1);
+});
+
+const initialQuery = new URLSearchParams(window.location.search);
+searchInput.value = initialQuery.get('search') || '';
+if ([...regionFilter.options].some((option) => option.value === initialQuery.get('region'))) {
+    regionFilter.value = initialQuery.get('region');
+}
+if ([...seasonFilter.options].some((option) => option.value === initialQuery.get('season'))) {
+    seasonFilter.value = initialQuery.get('season');
+}
+if ([...availabilityFilter.options].some((option) => option.value === initialQuery.get('availability'))) {
+    availabilityFilter.value = initialQuery.get('availability');
+}
+if ([...sortField.options].some((option) => option.value === initialQuery.get('sort'))) {
+    sortField.value = initialQuery.get('sort');
+}
+if ([...sortOrder.options].some((option) => option.value === initialQuery.get('order'))) {
+    sortOrder.value = initialQuery.get('order');
+}
+
+activeFilters = captureFilters();
+loadTrips(Number(initialQuery.get('page')) || 1);

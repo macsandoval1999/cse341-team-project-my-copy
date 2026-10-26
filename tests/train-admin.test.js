@@ -48,6 +48,18 @@ describe('train admin access', () => {
     const page = await admin.get('/trains-admin');
     expect(page.status).toBe(200);
     expect(page.text).toContain('Manage Trains');
+    expect(page.text).toContain('id="train-create-validation"');
+    expect(page.text).toContain('id="train-edit-validation"');
+    expect(page.text).toContain('name="id" required placeholder="n700-shinkansen"');
+    expect(page.text).toContain('name="capacity" min="0" step="1" required');
+    expect(page.text).toContain('id="admin-train-edit-modal" role="dialog"');
+    expect(page.text).toContain('id="admin-train-trips-modal" role="dialog"');
+    expect(page.text).toContain('id="admin-delete-dialog"');
+    expect(page.text).toContain('Type');
+    expect(page.text).toContain('/js/admin-delete-confirm.js');
+    expect(page.text).toContain('data-action="view-trips"');
+    expect(page.text).not.toContain('<form data-field="edit-form"');
+    expect(page.text).not.toContain('data-field="trips"');
 
     const dashboard = await admin.get('/admin');
     expect(dashboard.text).toContain('href="/trains-admin"');
@@ -62,6 +74,7 @@ describe('train admin access', () => {
       expect(response.status, path).toBe(200);
       expect(response.text, path).toContain('Back to Admin Dashboard');
       expect(response.text, path).toContain('href="/admin"');
+      expect(response.text, path).toContain('id="admin-delete-dialog"');
     }
   });
 

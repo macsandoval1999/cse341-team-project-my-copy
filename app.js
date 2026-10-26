@@ -79,19 +79,25 @@ app.use((err, req, res, next) => {
     }
 
     if (req.path.startsWith("/api/")) {
-        const message = err.type === "entity.parse.failed"
-            ? "Invalid JSON request body"
-            : status === 404
-                ? "API endpoint not found"
-                : status >= 500
-                    ? "Internal server error"
-                    : err.message;
+        let message = err.message;
+        if (err.type === "entity.parse.failed") {
+            message = "Invalid JSON request body";
+        } else if (status === 404) {
+            message = "API endpoint not found";
+        } else if (status >= 500) {
+            message = "Internal server error";
+        }
         return res.status(status).json({ error: message });
     }
 
-    const template = status === 404 ? "404" : "500";
+    let template = "500";
+    let title = "Server Error";
+    if (status === 404) {
+        template = "404";
+        title = "Page Not Found";
+    }
     const context = {
-        title: status === 404 ? "Page Not Found" : "Server Error",
+        title,
         error: err.message,
         stack: err.stack,
     };

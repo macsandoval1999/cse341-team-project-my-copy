@@ -2,32 +2,62 @@
 
 <section class="trains-hero">
     <h1>Learn about our Trains</h1>
-    <p>
-        Explore the physical trains that power scenic the trips across the Kizuna Rail network.
+    <p class="page-description">
+        Explore the trains serving scenic trips across the Kizuna Rail network.
     </p>
 </section>
 <!-- test -->
 <section class="trains-catalog">
-    <div class="trains-filters" id="trains-filters">
-        <input type="search" id="trains-search" placeholder="Search trains...">
-        <select id="trains-type-filter">
-            <option value="">All Types</option>
-        </select>
-        <select id="trains-power-filter">
-            <option value="">All Power Sources</option>
-        </select>
-    </div>
+    <form class="users-controls trains-controls" id="trains-filters" role="search">
+        <label class="users-search-control" for="trains-search">
+            <span>Search trains</span>
+            <input name="q" type="search" id="trains-search" maxlength="100" placeholder="Name, operator, or description">
+        </label>
+        <label for="trains-type-filter">
+            <span>Type</span>
+            <select name="type" id="trains-type-filter">
+                <option value="">All types</option>
+            </select>
+        </label>
+        <label for="trains-power-filter">
+            <span>Power source</span>
+            <select name="powerSource" id="trains-power-filter">
+                <option value="">All power sources</option>
+            </select>
+        </label>
+        <label for="trains-sort-field">
+            <span>Sort by</span>
+            <select name="sort" id="trains-sort-field">
+                <option value="name">Name</option>
+                <option value="operator">Operator</option>
+                <option value="maxSpeedKmh">Top speed</option>
+                <option value="capacity">Capacity</option>
+            </select>
+        </label>
+        <label for="trains-sort-order">
+            <span>Order</span>
+            <select name="order" id="trains-sort-order">
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+            </select>
+        </label>
+        <div class="users-control-actions">
+            <button type="submit">Search</button>
+            <button type="button" id="trains-reset">Reset</button>
+        </div>
+    </form>
+    <p id="trains-results-count" aria-live="polite"></p>
     <div class="trains-state" id="trains-loading">Loading trains...</div>
     <div class="trains-state trains-error" id="trains-error" hidden></div>
     <div class="trains-state" id="trains-empty" hidden>No trains match your search or filters.</div>
 
     <div class="trains-grid" id="trains-list"></div>
 
-    <div class="trains-pagination" id="trains-pagination" hidden>
+    <nav class="trains-pagination users-pagination" id="trains-pagination" aria-label="Train pages" hidden>
         <button type="button" id="trains-prev-page">Previous</button>
-        <span id="trains-page-indicator"></span>
+        <div class="users-page-links" id="trains-page-links" aria-label="Page numbers"></div>
         <button type="button" id="trains-next-page">Next</button>
-    </div>
+    </nav>
 
     <template id="train-card-template">
         <article class="train-card">

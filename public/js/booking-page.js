@@ -128,9 +128,10 @@ const autoFillForm = () => {
 
 const updateTicketAvailability = async (day) => {
     try {
-        const response = await fetch(`/api/ticket-classes?day=${encodeURIComponent(day)}`);
+        const response = await fetch(`/api/ticket-classes?day=${encodeURIComponent(day)}&limit=50`);
         if (!response.ok) throw new Error(`Ticket availability request failed (${response.status})`);
-        const availableTickets = await response.json();
+        const payload = await response.json();
+        const availableTickets = payload.data || [];
         const availableClasses = availableTickets.map((ticket) => ticket.class);
 
         ticketCards.forEach((card) => {

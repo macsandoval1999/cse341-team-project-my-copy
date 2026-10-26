@@ -5,8 +5,17 @@ export const getAllTicketClasses = async () => {
 };
 
 export const getTicketClassesForDay = async (day) => {
-    // Use regex for a case-insensitive match
     return TicketClass.find({ 
-        availableDays: { $regex: new RegExp(`^${day}$`, 'i') } 
-    });
+        availableDays: { $regex: new RegExp(`^${day}$`, 'i') }
+    }).lean();
+};
+
+export const getPaginatedTicketClasses = async ({ filter = {}, page, limit, sort, order }) => {
+    const skip = (page - 1) * limit;
+    const [ticketClasses, totalItems] = await Promise.all([
+        TicketClass.find(filter).sort({ [sort]: order, _id: 1 }).skip(skip).limit(limit).lean(),
+        TicketClass.countDocuments(filter),
+    ]);
+
+    return { ticketClasses, totalItems };
 };

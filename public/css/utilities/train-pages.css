@@ -67,17 +67,163 @@ Builds on trains.css (cards) and admin-trips.css (fields and buttons).
         color: var(--clr-text-secondary);
     }
 
+    .admin-train-trip-summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-md);
+        margin: var(--space-md) 0;
+        padding: var(--space-md);
+        border: 1px solid #cfdbf7;
+        border-radius: var(--radius-md);
+        background: #f4f7ff;
+
+        h3,
+        p {
+            margin: 0;
+        }
+
+        h3 {
+            color: var(--clr-text-primary);
+            font-size: var(--font-size-md);
+        }
+
+        p {
+            margin-top: var(--space-xs);
+            color: var(--clr-text-secondary);
+        }
+
+        button {
+            flex: 0 0 auto;
+            min-height: 2.75rem;
+            padding: var(--space-sm) var(--space-md);
+            border: 1px solid #295d49;
+            border-radius: var(--radius-md);
+            background: #295d49;
+            color: #fff;
+            font: inherit;
+            cursor: pointer;
+
+            &:hover {
+                background: #1f4737;
+            }
+        }
+    }
+
+    .admin-train-overlay {
+        position: fixed;
+        z-index: 30;
+        inset: 0;
+        background: rgb(16 30 24 / 58%);
+        backdrop-filter: blur(2px);
+    }
+
+    .admin-train-modal {
+        position: fixed;
+        z-index: 31;
+        inset: 50% auto auto 50%;
+        box-sizing: border-box;
+        width: min(54rem, calc(100vw - 2rem));
+        max-height: calc(100vh - 2rem);
+        overflow-y: auto;
+        padding: var(--space-xl);
+        transform: translate(-50%, -50%);
+        border: 1px solid #b7c4e8;
+        border-radius: var(--radius-lg);
+        background: var(--clr-surface);
+        box-shadow: var(--shadow-lg);
+
+        h2 {
+            margin: 0 0 var(--space-lg);
+            color: var(--clr-text-primary);
+            font-size: var(--font-size-xl);
+        }
+    }
+
+    .admin-train-overlay[hidden],
+    .admin-train-modal[hidden] {
+        display: none;
+    }
+
+    #admin-train-edit-form {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-md);
+
+        .admin-train-edit-description,
+        .admin-train-modal-actions {
+            grid-column: 1 / -1;
+        }
+
+        textarea {
+            max-width: none;
+        }
+    }
+
+    .admin-train-modal-actions {
+        justify-content: flex-end;
+        margin-top: var(--space-sm);
+    }
+
+    .admin-train-modal-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-md);
+        margin-bottom: var(--space-lg);
+        padding: 0;
+        background: transparent;
+        box-shadow: none;
+        color: inherit;
+
+        h2 {
+            margin: 0;
+        }
+
+        p {
+            margin: var(--space-xs) 0 0;
+            color: var(--clr-text-secondary);
+        }
+    }
+
+    .admin-train-modal-close {
+        flex: 0 0 auto;
+        display: grid;
+        width: 2.5rem;
+        height: 2.5rem;
+        padding: 0;
+        place-items: center;
+        border: 1px solid var(--clr-border);
+        border-radius: 50%;
+        background: var(--clr-surface);
+        color: var(--clr-text-primary);
+        font-size: 1.5rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+
     /* One row per trip: name, then the move controls */
     .admin-train-trips {
         display: grid;
         gap: var(--space-sm);
-        margin: 0 0 var(--space-md) 0;
+        max-height: min(55vh, 32rem);
+        overflow-y: auto;
+        margin: 0;
         padding: 0;
         list-style: none;
 
+        a {
+            color: var(--clr-link-dark);
+
+            &:hover,
+            &:focus-visible {
+                color: var(--clr-link-dark-hover);
+            }
+        }
+
         li {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: minmax(10rem, 1fr) minmax(12rem, 1.2fr) auto;
             align-items: center;
             gap: var(--space-xs) var(--space-sm);
             padding: var(--space-sm);
@@ -87,15 +233,26 @@ Builds on trains.css (cards) and admin-trips.css (fields and buttons).
         }
 
         a {
-            flex: 1 1 100%;
             font-weight: 600;
         }
 
         label {
-            display: flex;
-            align-items: center;
+            display: grid;
             gap: var(--space-xs);
             margin: 0;
+            color: var(--clr-text-secondary);
+            font-size: var(--font-size-sm);
+        }
+
+        select {
+            min-width: 0;
+            min-height: 2.5rem;
+            padding: var(--space-xs) var(--space-sm);
+            border: 1px solid #9aaca3;
+            border-radius: var(--radius-sm);
+            background: #fff;
+            color: var(--clr-text-primary);
+            font: inherit;
         }
 
         button {
@@ -104,33 +261,82 @@ Builds on trains.css (cards) and admin-trips.css (fields and buttons).
             font: inherit;
             cursor: pointer;
         }
+
+        .admin-train-trips-empty {
+            display: block;
+            color: var(--clr-text-secondary);
+            text-align: center;
+        }
     }
 
     /* Add and edit forms: two columns on wider screens, description across the full width */
     .train-create {
         margin-bottom: var(--space-lg);
         padding: var(--space-md);
-        border: 1px solid var(--clr-border);
+        border: 1px solid #b7c4e8;
         border-radius: var(--radius-md);
-        background: var(--clr-surface);
+        background: linear-gradient(135deg, #fff 0%, #f4f7ff 100%);
+        box-shadow: var(--shadow-sm);
 
         summary {
-            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
             color: var(--clr-text-primary);
             cursor: pointer;
+            list-style: none;
+
+            &::-webkit-details-marker {
+                display: none;
+            }
+
+            strong,
+            small {
+                display: block;
+            }
+
+            strong {
+                font-size: var(--font-size-md);
+            }
+
+            small {
+                margin-top: var(--space-xs);
+                color: var(--clr-text-secondary);
+                font-weight: 400;
+            }
         }
+
     }
 
-    #train-create-form,
-    [data-field="edit-form"] {
+    .train-create .trip-create-icon {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        flex: 0 0 2.5rem;
+        width: 2.5rem;
+        height: 2.5rem;
+        place-items: center;
+        border-radius: 50%;
+        background: #e5eefb;
+        color: #295d49;
+        font-size: 1.5rem;
+        font-weight: 500;
+        transition: transform 0.2s ease, background-color 0.2s ease;
+    }
+
+    #train-create-form {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: var(--space-md);
-        margin-top: var(--space-md);
+        margin-top: var(--space-lg);
+        padding-top: var(--space-lg);
+        border-top: 1px solid #d5dfef;
 
         .admin-trip-field:has(textarea),
-        .admin-trip-actions {
+        .train-create-actions {
             grid-column: 1 / -1;
+        }
+
+        .admin-trip-field {
+            align-self: start;
         }
 
         textarea {
@@ -138,9 +344,8 @@ Builds on trains.css (cards) and admin-trips.css (fields and buttons).
         }
     }
 
-    /* display: grid above would otherwise override the hidden attribute on the edit form */
-    [data-field="edit-form"][hidden] {
-        display: none;
+    .train-create-actions {
+        justify-content: flex-end;
     }
 
     /* Highlight tags on the trip cards (the trips admin page uses the trains card markup) */
@@ -166,5 +371,40 @@ Builds on trains.css (cards) and admin-trips.css (fields and buttons).
 
     .train-card .season-badge {
         text-transform: capitalize;
+    }
+
+    @media (max-width: 600px) {
+        #train-create-form {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .admin-train-trip-summary {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        #admin-train-edit-form {
+            grid-template-columns: 1fr;
+
+            .admin-train-edit-description,
+            .admin-train-modal-actions {
+                grid-column: auto;
+            }
+        }
+
+        .admin-train-trips li {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 440px) {
+        #train-create-form {
+            grid-template-columns: 1fr;
+
+            .admin-trip-field:has(textarea),
+            .train-create-actions {
+                grid-column: auto;
+            }
+        }
     }
 }

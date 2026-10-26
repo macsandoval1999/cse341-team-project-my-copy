@@ -1,6 +1,13 @@
 <%- include('./partials/header') %>
 <section class="trains-hero">
     <h1><%= title %></h1>
+    <p class="page-description">
+        <% if (isAdmin) { %>
+            Review and manage bookings across the rail network.
+        <% } else { %>
+            Review and manage bookings associated with your account.
+        <% } %>
+    </p>
     <% if (isAdmin) { %>
         <a href="/admin" class="admin-trips-back">&larr; Back to Admin Dashboard</a>
     <% } %>
@@ -13,45 +20,67 @@
     data-current-user-id="<%= currentUserId %>"
     data-current-user-email="<%= currentUserEmail %>"
 >
+    <form class="users-controls booking-admin-controls" id="booking-filter-form" role="search">
+        <label class="users-search-control" for="booking-search">
+            <span>Search bookings</span>
+            <input type="search" id="booking-search" maxlength="100" placeholder="Confirmation, trip, or passenger">
+        </label>
+        <label for="booking-trip-id">
+            <span>Trip ID</span>
+            <input type="search" id="booking-trip-id" placeholder="Filter by trip">
+        </label>
+        <label for="ticket-class">
+            <span>Ticket class</span>
+            <select id="ticket-class">
+                <option value="">All classes</option>
+            </select>
+        </label>
+        <label for="start-date">
+            <span>Booked from</span>
+            <input type="date" id="start-date">
+        </label>
+        <label for="end-date">
+            <span>Booked through</span>
+            <input type="date" id="end-date">
+        </label>
+        <label for="sort-by">
+            <span>Sort by</span>
+            <select id="sort-by">
+                <option value="createdAt">Booking date</option>
+                <option value="tripId">Trip</option>
+                <option value="selectedDay">Travel day</option>
+                <option value="ticketClass">Ticket class</option>
+                <option value="scheduleId">Schedule</option>
+                <option value="id">Confirmation ID</option>
+            </select>
+        </label>
+        <label for="sort-order">
+            <span>Order</span>
+            <select id="sort-order">
+                <option value="desc">Newest first</option>
+                <option value="asc">Oldest first</option>
+            </select>
+        </label>
+        <div class="users-control-actions">
+            <button type="submit">Search</button>
+            <button type="button" id="booking-reset">Reset</button>
+        </div>
+    </form>
     <div class="trains-state" id="bookings-loading">Loading Bookings...</div>
     <div class="trains-state trains-error" id="bookings-error" hidden></div>
     <div class="trains-state" id="bookings-empty" hidden>
         No bookings found.
     </div>
 
+        <p class="booking-results-count" id="booking-results-count" aria-live="polite"></p>
         <div class="trains-grid" id="bookings-list"></div>
 
-        <div class="pagination-controls" id="pagination-controls">
+        <nav class="users-pagination" id="pagination-controls" aria-label="Booking pages">
             <button id="prev-page" class="btn-pagination" disabled>Previous</button>
-            <span id="current-page">Page 1</span>
+            <div class="users-page-links" id="booking-page-links" aria-label="Page numbers"></div>
             <button id="next-page" class="btn-pagination">Next</button>
-        </div>
+        </nav>
 
-        <div class="sorting-controls" id="sorting-controls">
-            <label for="sort-by">Sort By:</label>
-            <select id="sort-by">
-            </select>
-            <label for="sort-order">Sort order:</label>
-            <select id="sort-order">
-            </select>
-        </div>
-
-        <div class="booking-filters" id="booking-filter-form">
-            <form class="booking-filters-form" method="get">
-                <label for="ticket-class">Ticket Class:</label>
-                <select id="ticket-class" name="ticketClass">
-                    <option value="">All Classes</option> 
-                </select>
-
-                <label for="start-date">Booking Start Date:</label>
-                <input type="date" id="start-date" name="startDate">
-
-                <label for="end-date">Booking End Date:</label>
-                <input type="date" id="end-date" name="endDate">
-
-                <button type="submit" class="btn-filter" id="btn-booking-filter">Filter</button>
-            </form>
-        </div>
         <template id="booking-card-template">
             <article class="train-card">
                 <header class="train-card-header">
@@ -143,24 +172,6 @@
                     </form>
                 </dialog>
 
-                <dialog class="booking-flow-dialog booking-delete-dialog" aria-label="Delete booking">
-                    <div class="booking-dialog-header">
-                        <h2>Delete booking?</h2>
-                        <p>
-                            This permanently deletes the booking and its passenger
-                            details.
-                        </p>
-                    </div>
-                    <p class="booking-delete-error" role="alert" hidden></p>
-                    <div class="booking-dialog-actions">
-                        <button type="button" class="btn-cancel-delete">
-                            Keep booking
-                        </button>
-                        <button type="button" class="btn-delete-confirm">
-                            Delete booking
-                        </button>
-                    </div>
-                </dialog>
             </article>
         </template>
 

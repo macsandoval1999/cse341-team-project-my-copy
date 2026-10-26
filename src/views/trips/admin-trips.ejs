@@ -3,28 +3,139 @@
 <div class="admin-trips admin-trains train-page trains-catalog">
     <div class="admin-trips-heading trains-hero">
         <h1><%= title %></h1>
+        <p class="page-description">Create and update trips, their details, and operating schedules.</p>
         <a href="/admin" class="admin-trips-back">&larr; Back to Admin Dashboard</a>
     </div>
 
-    <section class="admin-trips-filters" aria-label="Filter trips">
-        <label for="region-filter">Search by Region:</label>
-        <select id="region-filter">
-            <option value="all">All Regions</option>
-            <% regions.forEach((region) => { %>
-                <option value="<%= region %>"><%= region.charAt(0).toUpperCase() + region.slice(1) %></option>
-            <% }); %>
-        </select>
-        <label for="season-filter">Search by Season:</label>
-        <select id="season-filter">
-            <option value="all">Any Season</option>
-            <% seasons.forEach((season) => { %>
-                <option value="<%= season %>"><%= season.charAt(0).toUpperCase() + season.slice(1) %></option>
-            <% }); %>
-        </select>
-        <label for="trip-keyword-search">Keyword Search:</label>
-        <input type="search" id="trip-keyword-search" placeholder="Search name or description&hellip;" maxlength="100">
-    </section>
+    <details class="trip-create">
+        <summary>
+            <span class="trip-create-icon" aria-hidden="true">+</span>
+            <span><strong>Add a trip</strong><small>A trip needs an initial schedule before it can be saved. Add more schedules from Edit.</small></span>
+        </summary>
+        <form id="trip-create-form">
+            <label class="admin-trip-field"><span>Trip ID</span><input type="text" name="id" required pattern="[a-z0-9]+(-[a-z0-9]+)*" title="Use lowercase letters, numbers, and single hyphens (for example, coastal-express)."></label>
+            <label class="admin-trip-field"><span>Trip name</span><input type="text" name="name" required></label>
+            <label class="admin-trip-field trip-create-description"><span>Description</span><textarea name="description" rows="3" required></textarea></label>
+            <label class="admin-trip-field"><span>Train</span>
+                <select name="trainId" required>
+                    <option value="">-- Select a train --</option>
+                </select>
+            </label>
+            <label class="admin-trip-field"><span>Region</span><input type="text" name="region" required></label>
+            <label class="admin-trip-field"><span>Duration</span><input type="text" name="duration" required placeholder="4.5 hours"></label>
+            <label class="admin-trip-field"><span>Distance (km)</span><input type="number" name="distance" min="0" step="any" required></label>
+            <label class="admin-trip-field"><span>Best season</span><input type="text" name="bestSeason" required placeholder="autumn"></label>
+            <label class="admin-trip-field"><span>Start station</span>
+                <select name="startStation" required>
+                    <option value="">-- Select start station --</option>
+                </select>
+            </label>
+            <label class="admin-trip-field"><span>End station</span>
+                <select name="endStation" required>
+                    <option value="">-- Select end station --</option>
+                </select>
+            </label>
+            <label class="admin-trip-field"><span>Operating months</span>
+                <select name="operatingMonths" multiple aria-describedby="create-months-help">
+                    <% for (let month = 1; month <= 12; month++) { %>
+                        <option value="<%= month %>"><%= new Date(2000, month - 1).toLocaleString('en', { month: 'long' }) %></option>
+                    <% } %>
+                </select>
+                <small id="create-months-help">Optional. Use Ctrl (Windows) or Cmd (Mac) to select multiple months.</small>
+            </label>
+            <section class="trip-schedule-editor trip-create-schedule" aria-labelledby="create-schedule-title">
+                <div class="trip-schedule-editor-heading">
+                    <h3 id="create-schedule-title">Initial schedule</h3>
+                    <p>Set at least one departure schedule. You can add additional schedules after creating the trip.</p>
+                </div>
+                <label><span>Departure</span><input name="scheduleDepartureTime" type="time" required></label>
+                <label><span>Arrival</span><input name="scheduleArrivalTime" type="time" required></label>
+                <fieldset id="create-schedule-days" class="trip-schedule-days" aria-describedby="create-schedule-days-error">
+                    <legend>Operating days</legend>
+                    <% ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].forEach((day) => { %>
+                        <label><input type="checkbox" name="scheduleDaysOfWeek" value="<%= day %>"><%= day.slice(0, 3) %></label>
+                    <% }); %>
+                </fieldset>
+                <p id="create-schedule-days-error" class="admin-form-validation" role="alert" hidden></p>
+            </section>
+            <label class="admin-trip-field"><span>Trip image URL</span><input type="text" name="imageUrl"></label>
+            <label class="admin-trip-field"><span>Highlights</span>
+                <textarea name="highlights" rows="3" aria-describedby="create-highlights-help"></textarea>
+                <small id="create-highlights-help">Optional. Enter one highlight per line.</small>
+            </label>
+            <div class="admin-trip-actions trip-create-actions">
+                <button type="reset" class="admin-trip-cancel">Clear fields</button>
+                <button type="submit">Create trip</button>
+            </div>
+        </form>
+        <p id="trip-create-validation" class="admin-form-validation" role="alert" hidden></p>
+    </details>
+
+    <form class="users-controls admin-trips-controls" id="admin-trips-filters" role="search">
+        <label class="users-search-control" for="trip-keyword-search">
+            <span>Search trips</span>
+            <input type="search" id="trip-keyword-search" placeholder="Search name or description&hellip;" maxlength="100">
+        </label>
+        <label for="region-filter">
+            <span>Region</span>
+            <select id="region-filter">
+                <option value="all">All regions</option>
+                <% regions.forEach((region) => { %>
+                    <option value="<%= region %>"><%= region.charAt(0).toUpperCase() + region.slice(1) %></option>
+                <% }); %>
+            </select>
+        </label>
+        <label for="schedule-filter">
+            <span>Schedule coverage</span>
+            <select id="schedule-filter">
+                <option value="all">All trips</option>
+                <option value="configured">Active schedules set</option>
+                <option value="missing">Missing active schedules</option>
+            </select>
+        </label>
+        <label for="season-filter">
+            <span>Season</span>
+            <select id="season-filter">
+                <option value="all">Any season</option>
+                <% seasons.forEach((season) => { %>
+                    <option value="<%= season %>"><%= season.charAt(0).toUpperCase() + season.slice(1) %></option>
+                <% }); %>
+            </select>
+        </label>
+        <label for="availability-filter">
+            <span>Availability</span>
+            <select id="availability-filter">
+                <option value="all">All</option>
+                <option value="available">Available</option>
+                <option value="unavailable">Unavailable</option>
+            </select>
+        </label>
+        <label for="trip-sort-field">
+            <span>Sort by</span>
+            <select id="trip-sort-field">
+                <option value="name">Name</option>
+                <option value="region">Region</option>
+                <option value="startStation">Start station</option>
+                <option value="endStation">End station</option>
+                <option value="distance">Distance</option>
+                <option value="bestSeason">Best season</option>
+            </select>
+        </label>
+        <label for="trip-sort-order">
+            <span>Order</span>
+            <select id="trip-sort-order">
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+            </select>
+        </label>
+        <div class="users-control-actions">
+            <button type="submit">Search</button>
+            <button type="button" id="admin-trips-reset">Reset</button>
+        </div>
+    </form>
     <p id="admin-trips-error" class="admin-trips-error" role="alert" hidden></p>
+    <p id="trip-create-success" class="trip-create-success" role="status" aria-live="polite" hidden></p>
+    <p id="admin-trips-results-count" aria-live="polite"></p>
 
 <!-- Modal Overlay & Popup Editor (Uses clean IDs for target styling) -->
 <div id="modal-overlay" class="admin-trip-overlay" hidden></div>
@@ -34,10 +145,46 @@
     
     <form id="admin-edit-form">
         <input type="hidden" id="edit-trip-id">
+        <p id="admin-edit-validation" class="admin-form-validation" role="alert" hidden></p>
         
         <label class="admin-trip-field"><span>Trip name</span><input type="text" id="edit-name" required></label>
         <label class="admin-trip-field"><span>Description</span><textarea id="edit-description" required rows="3"></textarea></label>
+        <label class="admin-trip-field"><span>Train</span>
+            <select id="edit-train">
+                <option value="">No train assigned (temporarily unavailable)</option>
+            </select>
+        </label>
+        <label class="admin-trip-field"><span>Region</span>
+            <select id="edit-region" required>
+                <option value="">-- Select a region --</option>
+                <% regions.forEach((region) => { %>
+                    <option value="<%= region %>"><%= region.charAt(0).toUpperCase() + region.slice(1) %></option>
+                <% }); %>
+            </select>
+        </label>
+        <label class="admin-trip-field"><span>Duration</span><input type="text" id="edit-duration" required></label>
         <label class="admin-trip-field"><span>Distance (km)</span><input type="number" id="edit-distance" min="0" step="any" required></label>
+        <label class="admin-trip-field"><span>Best season</span>
+            <select id="edit-season" required>
+                <option value="">-- Select a season --</option>
+                <% seasons.forEach((season) => { %>
+                    <option value="<%= season %>"><%= season.charAt(0).toUpperCase() + season.slice(1) %></option>
+                <% }); %>
+            </select>
+        </label>
+        <label class="admin-trip-field"><span>Operating months</span>
+            <select id="edit-months" multiple aria-describedby="months-help">
+                <% for (let month = 1; month <= 12; month++) { %>
+                    <option value="<%= month %>"><%= new Date(2000, month - 1).toLocaleString('en', { month: 'long' }) %></option>
+                <% } %>
+            </select>
+            <small id="months-help">Use Ctrl (Windows) or Cmd (Mac) to select multiple months.</small>
+        </label>
+        <label class="admin-trip-field"><span>Highlights</span>
+            <textarea id="edit-highlights" rows="3" aria-describedby="highlights-help"></textarea>
+            <small id="highlights-help">Enter one highlight per line.</small>
+        </label>
+        <label class="admin-trip-field"><span>Trip image URL</span><input type="text" id="edit-image-url"></label>
 
         <label class="admin-trip-field"><span>Start station</span>
             <select id="edit-start" required>
@@ -51,10 +198,26 @@
             </select>
         </label>
 
-        <label class="admin-trip-field"><span>Associated schedules</span>
-            <select id="edit-schedules" multiple aria-describedby="schedule-help"></select>
-            <small id="schedule-help">Use Ctrl (Windows) or Cmd (Mac) to select multiple schedules.</small>
-        </label>
+        <section class="trip-schedule-editor" aria-labelledby="trip-schedules-title">
+            <div class="trip-schedule-editor-heading">
+                <h3 id="trip-schedules-title" tabindex="-1">Trip schedules</h3>
+                <p>Each schedule belongs to this trip only. To use the same times for another trip, create a separate schedule.</p>
+            </div>
+            <div id="edit-schedules" class="trip-schedule-list" aria-live="polite"></div>
+            <div id="trip-schedule-create-form" class="trip-schedule-create-form">
+                <h4>Add a schedule</h4>
+                <label><span>Departure</span><input name="departureTime" type="time" required></label>
+                <label><span>Arrival</span><input name="arrivalTime" type="time" required></label>
+                <fieldset>
+                    <legend>Operating days</legend>
+                    <% ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"].forEach((day) => { %>
+                        <label><input type="checkbox" name="daysOfWeek" value="<%= day %>"><%= day.slice(0, 3) %></label>
+                    <% }); %>
+                </fieldset>
+                <button type="button" id="trip-schedule-add">Add schedule</button>
+            </div>
+            <p id="trip-schedule-status" role="status" aria-live="polite" hidden></p>
+        </section>
         
         <div class="admin-trip-actions">
             <button type="button" class="admin-trip-cancel">Cancel</button>
@@ -69,9 +232,9 @@
     <p role="status">Loading trips...</p>
 </div>
 
-<nav class="admin-trips-pagination" aria-label="Trips pagination">
+<nav class="users-pagination admin-trips-pagination" id="trips-pagination" aria-label="Trips pagination">
     <button type="button" id="trips-prev-page">&larr; Previous</button>
-    <span id="trips-page-status" role="status">Page 1</span>
+    <div class="users-page-links" id="trips-page-links" aria-label="Page numbers"></div>
     <button type="button" id="trips-next-page">Next &rarr;</button>
 </nav>
 
@@ -90,6 +253,10 @@
 
         <dl class="train-specs">
             <div class="spec-item">
+                <dt>Train</dt>
+                <dd class="trip-train"></dd>
+            </div>
+            <div class="spec-item">
                 <dt>From</dt>
                 <dd class="start-station"></dd>
             </div>
@@ -104,6 +271,10 @@
             <div class="spec-item">
                 <dt>Distance</dt>
                 <dd><span class="trip-distance"></span> km</dd>
+            </div>
+            <div class="spec-item">
+                <dt>Schedules</dt>
+                <dd class="trip-schedule-count"></dd>
             </div>
         </dl>
 
@@ -126,27 +297,219 @@
 </template>
 
 <script>
+    let editingTrip = null;
+
+    const setSelectValue = (select, value, matchDatasetKey) => {
+        const currentValue = String(value ?? '').trim().toLowerCase();
+        const matchingOption = Array.from(select.options).find((option) =>
+            option.value.trim().toLowerCase() === currentValue ||
+            option.dataset[matchDatasetKey]?.trim().toLowerCase() === currentValue
+        );
+        select.value = matchingOption?.value || '';
+    };
+
+    const getSelectedStationValue = (select, originalValue) => {
+        const selectedOption = select.selectedOptions[0];
+        if (!selectedOption) return '';
+
+        const original = String(originalValue ?? '').trim().toLowerCase();
+        const matchesOriginal = [
+            selectedOption.value,
+            selectedOption.dataset.stationId,
+        ].some((value) => value?.trim().toLowerCase() === original);
+
+        return matchesOriginal ? originalValue : selectedOption.value;
+    };
+
+    const weekdayOptions = [
+        ['monday', 'Mon'], ['tuesday', 'Tue'], ['wednesday', 'Wed'],
+        ['thursday', 'Thu'], ['friday', 'Fri'], ['saturday', 'Sat'], ['sunday', 'Sun'],
+    ];
+    const showScheduleStatus = (message, isError = false) => {
+        const status = document.getElementById('trip-schedule-status');
+        status.textContent = message;
+        status.classList.toggle('is-error', isError);
+        status.hidden = false;
+    };
+    const describeInvalidControl = (control) => {
+        const label = control.labels?.[0];
+        const fieldName = label?.querySelector('span')?.textContent.trim() ||
+            label?.textContent.trim() ||
+            control.name ||
+            'Required field';
+        return control.validity.valueMissing
+            ? `${fieldName} is required`
+            : `${fieldName}: ${control.validationMessage}`;
+    };
+    const attachValidationFeedback = (form, feedbackElement, action) => {
+        form.addEventListener('invalid', () => {
+            window.setTimeout(() => {
+                const invalidControls = Array.from(form.querySelectorAll(':invalid'));
+                feedbackElement.textContent =
+                    `Complete the following before ${action}: ${invalidControls.map(describeInvalidControl).join('; ')}.`;
+                feedbackElement.hidden = false;
+            }, 0);
+        }, true);
+        form.addEventListener('input', () => {
+            feedbackElement.hidden = true;
+        });
+        form.addEventListener('change', () => {
+            feedbackElement.hidden = true;
+        });
+    };
+    const addWeekdayOptions = (container, selectedDays = []) => {
+        const fieldset = document.createElement('fieldset');
+        fieldset.className = 'trip-schedule-days';
+        const legend = document.createElement('legend');
+        legend.textContent = 'Operating days';
+        fieldset.appendChild(legend);
+        weekdayOptions.forEach(([day, label]) => {
+            const dayLabel = document.createElement('label');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = day;
+            checkbox.checked = selectedDays.includes(day);
+            dayLabel.append(checkbox, document.createTextNode(label));
+            fieldset.appendChild(dayLabel);
+        });
+        container.appendChild(fieldset);
+    };
+    const loadTripSchedules = async (tripId) => {
+        const scheduleList = document.getElementById('edit-schedules');
+        scheduleList.replaceChildren();
+        scheduleList.textContent = 'Loading schedules…';
+        const schedules = await fetchAllPages(
+            `/api/trips/${encodeURIComponent(tripId)}/schedules`,
+            'trip schedules'
+        );
+        scheduleList.replaceChildren();
+        if (schedules.length === 0) {
+            const empty = document.createElement('p');
+            empty.className = 'trip-schedules-empty';
+            empty.textContent = 'No schedules have been added to this trip.';
+            scheduleList.appendChild(empty);
+            return;
+        }
+
+        schedules.forEach((schedule) => {
+            const row = document.createElement('article');
+            row.className = 'trip-schedule-row';
+            row.dataset.scheduleId = String(schedule.id);
+            const title = document.createElement('h4');
+            title.textContent = `Schedule ${schedule.id}`;
+            row.appendChild(title);
+
+            const departureLabel = document.createElement('label');
+            departureLabel.textContent = 'Departure';
+            const departure = document.createElement('input');
+            departure.type = 'time';
+            departure.required = true;
+            departure.value = schedule.departureTime;
+            departureLabel.appendChild(departure);
+            row.appendChild(departureLabel);
+
+            const arrivalLabel = document.createElement('label');
+            arrivalLabel.textContent = 'Arrival';
+            const arrival = document.createElement('input');
+            arrival.type = 'time';
+            arrival.required = true;
+            arrival.value = schedule.arrivalTime;
+            arrivalLabel.appendChild(arrival);
+            row.appendChild(arrivalLabel);
+            addWeekdayOptions(
+                row,
+                Array.isArray(schedule.daysOfWeek) ? schedule.daysOfWeek : []
+            );
+
+            const activeLabel = document.createElement('label');
+            activeLabel.className = 'trip-schedule-active';
+            const active = document.createElement('input');
+            active.type = 'checkbox';
+            active.checked = schedule.status;
+            activeLabel.append(active, document.createTextNode('Active'));
+            row.appendChild(activeLabel);
+
+            const save = document.createElement('button');
+            save.type = 'button';
+            save.textContent = 'Save schedule';
+            save.addEventListener('click', async () => {
+                if (!departure.reportValidity() || !arrival.reportValidity()) {
+                    showScheduleStatus('Enter valid departure and arrival times before saving.', true);
+                    return;
+                }
+                const daysOfWeek = Array.from(
+                    row.querySelectorAll('.trip-schedule-days input:checked')
+                ).map((checkbox) => checkbox.value);
+                if (daysOfWeek.length === 0) {
+                    showScheduleStatus('Select at least one operating day.', true);
+                    return;
+                }
+                try {
+                    const response = await fetch(`/api/schedules/${schedule.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            departureTime: departure.value,
+                            arrivalTime: arrival.value,
+                            daysOfWeek,
+                            status: active.checked,
+                        }),
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.error || 'Unable to update schedule.');
+                    showScheduleStatus(`Schedule ${schedule.id} was updated.`);
+                } catch (error) {
+                    showScheduleStatus(error.message, true);
+                }
+            });
+            row.appendChild(save);
+            scheduleList.appendChild(row);
+        });
+    };
+
     const openEditForm = async (trip) => {
+        editingTrip = trip;
         document.getElementById('edit-trip-id').value = trip.id;
         document.getElementById('edit-name').value = trip.name;
         document.getElementById('edit-description').value = trip.description;
         document.getElementById('edit-distance').value = trip.distance;
+        setSelectValue(document.getElementById('edit-train'), trip.trainId);
+        setSelectValue(document.getElementById('edit-region'), trip.region);
+        document.getElementById('edit-duration').value = trip.duration || '';
+        setSelectValue(document.getElementById('edit-season'), trip.bestSeason);
+        document.getElementById('edit-image-url').value = trip.imageUrl || '';
+        document.getElementById('edit-highlights').value =
+            Array.isArray(trip.highlights) ? trip.highlights.join('\n') : '';
+        const monthSelect = document.getElementById('edit-months');
+        const operatingMonths = new Set((trip.operatingMonths || []).map(String));
+        Array.from(monthSelect.options).forEach((option) => {
+            option.selected = operatingMonths.has(option.value);
+        });
         
         //assign station select property
-        document.getElementById('edit-start').value = trip.startStation || '';
-        document.getElementById('edit-end').value = trip.endStation || '';
+        setSelectValue(
+            document.getElementById('edit-start'),
+            trip.startStation,
+            'stationId'
+        );
+        setSelectValue(
+            document.getElementById('edit-end'),
+            trip.endStation,
+            'stationId'
+        );
         
-        //get linked schedule dynamically
-        const scheduleSelect = document.getElementById('edit-schedules');
-        Array.from(scheduleSelect.options).forEach((option) => {
-            option.selected = option.dataset.tripId === trip.id;
-        });
         document.getElementById('admin-trips-error').hidden = true;
+        document.getElementById('admin-edit-validation').hidden = true;
         document.getElementById('modal-overlay').hidden = false;
         document.getElementById('edit-modal').hidden = false;
+        document.getElementById('trip-schedule-status').hidden = true;
+        try {
+            await loadTripSchedules(trip.id);
+        } catch (error) {
+            showScheduleStatus(`Schedules could not be loaded: ${error.message}`, true);
+        }
         document.getElementById('edit-name').focus();
     };
-
     const closeModal = () => {
         document.getElementById('modal-overlay').hidden = true;
         document.getElementById('edit-modal').hidden = true;
@@ -155,7 +518,10 @@
     document.querySelector('.admin-trip-cancel').addEventListener('click', closeModal);
     document.getElementById('modal-overlay').addEventListener('click', closeModal);
 
-    document.getElementById('admin-edit-form').addEventListener('submit', async (e) => {
+    const editForm = document.getElementById('admin-edit-form');
+    const editValidation = document.getElementById('admin-edit-validation');
+    attachValidationFeedback(editForm, editValidation, 'saving trip changes');
+    editForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const tripId = document.getElementById('edit-trip-id').value;
         
@@ -163,11 +529,29 @@
             name: document.getElementById('edit-name').value.trim(),
             description: document.getElementById('edit-description').value.trim(),
             distance: Number(document.getElementById('edit-distance').value),
-            startStation: document.getElementById('edit-start').value,
-            endStation: document.getElementById('edit-end').value,
-            scheduleIds: Array.from(document.getElementById('edit-schedules').selectedOptions)
-                .map((option) => Number(option.value))
+            trainId: document.getElementById('edit-train').value,
+            region: document.getElementById('edit-region').value,
+            duration: document.getElementById('edit-duration').value.trim(),
+            bestSeason: document.getElementById('edit-season').value,
+            operatingMonths: Array.from(document.getElementById('edit-months').selectedOptions)
+                .map((option) => Number(option.value)),
+            highlights: document.getElementById('edit-highlights').value
+                .split('\n')
+                .map((highlight) => highlight.trim())
+                .filter(Boolean),
+            imageUrl: document.getElementById('edit-image-url').value.trim(),
+            startStation: getSelectedStationValue(
+                document.getElementById('edit-start'),
+                editingTrip.startStation
+            ),
+            endStation: getSelectedStationValue(
+                document.getElementById('edit-end'),
+                editingTrip.endStation
+            )
         };
+        if (!updatePayload.trainId) {
+            delete updatePayload.trainId;
+        }
 
         try {
             const response = await fetch(`/api/trips/${tripId}`, {
@@ -184,14 +568,63 @@
             closeModal();
             await loadTrips();
         } catch (error) {
-            const errorElement = document.getElementById('admin-trips-error');
-            errorElement.textContent = error.message;
-            errorElement.hidden = false;
+            editValidation.textContent = error.message;
+            editValidation.hidden = false;
+        }
+    });
+
+    document.getElementById('trip-schedule-add').addEventListener('click', async () => {
+        const editor = document.getElementById('trip-schedule-create-form');
+        const departure = editor.querySelector('[name="departureTime"]');
+        const arrival = editor.querySelector('[name="arrivalTime"]');
+        const daysOfWeek = Array.from(
+            editor.querySelectorAll('[name="daysOfWeek"]:checked')
+        ).map((checkbox) => checkbox.value);
+        if (!departure.reportValidity() || !arrival.reportValidity()) {
+            showScheduleStatus('Enter valid departure and arrival times before adding this schedule.', true);
+            return;
+        }
+        if (daysOfWeek.length === 0) {
+            showScheduleStatus('Select at least one operating day.', true);
+            editor.querySelector('[name="daysOfWeek"]').focus();
+            return;
+        }
+
+        try {
+            const response = await fetch(
+                `/api/trips/${encodeURIComponent(editingTrip.id)}/schedules`,
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        departureTime: departure.value,
+                        arrivalTime: arrival.value,
+                        daysOfWeek,
+                        status: true,
+                    }),
+                }
+            );
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.error || 'Unable to add schedule.');
+            departure.value = '';
+            arrival.value = '';
+            editor.querySelectorAll('[name="daysOfWeek"]').forEach((checkbox) => {
+                checkbox.checked = false;
+            });
+            await loadTripSchedules(editingTrip.id);
+            showScheduleStatus(`Schedule ${result.id} was added to ${editingTrip.name}.`);
+        } catch (error) {
+            showScheduleStatus(error.message, true);
         }
     });
 
     const handleDeleteClick = async (tripId, name) => {
-        if (!confirm(`Permanently wipe out "${name}"? This cascades into the Schedule system.`)) return;
+        if (!await window.confirmAdminDelete({
+            itemName: "trip",
+            identifier: tripId,
+            identifierLabel: "trip ID",
+            description: `This deletes "${name}" and its schedules. Trips with bookings cannot be deleted.`,
+        })) return;
 
         try {
             const response = await fetch(`/api/trips/${tripId}`, { method: 'DELETE' });
@@ -210,88 +643,258 @@
 
     //loads stations in the backgrouns for the trips
 
+    const fetchAllPages = async (endpoint, label) => {
+        const items = [];
+        let page = 1;
+        let hasNextPage = true;
+
+        while (hasNextPage) {
+            const separator = endpoint.includes('?') ? '&' : '?';
+            const response = await fetch(
+                `${endpoint}${separator}limit=50&page=${page}`
+            );
+            if (!response.ok) throw new Error(`Failed to fetch ${label}.`);
+
+            const payload = await response.json();
+            items.push(...(payload.data || []));
+            hasNextPage = payload.pagination?.hasNextPage === true;
+            page += 1;
+        }
+
+        return items;
+    };
+
     const loadStationDropdowns = async () => {
-    const startSelect = document.getElementById('edit-start');
-    const endSelect = document.getElementById('edit-end');
+        const startSelect = document.getElementById('edit-start');
+        const endSelect = document.getElementById('edit-end');
+        const createStartSelect = document.querySelector('#trip-create-form [name="startStation"]');
+        const createEndSelect = document.querySelector('#trip-create-form [name="endStation"]');
+        const stations = await fetchAllPages('/api/stations', 'stations catalog');
 
-    try {
-        const response = await fetch('/api/stations');
-        if (!response.ok) throw new Error('Failed to fetch stations catalog.');
-        
-        const stations = await response.json();
-
-        stations.forEach(station => {
-            // Create selection option for Start
-            const optStart = document.createElement('option');
-            optStart.value = station.name; 
-            optStart.textContent = station.name;
-            startSelect.appendChild(optStart);
-
-            // Create selection option for End
-            const optEnd = document.createElement('option');
-            optEnd.value = station.name;
-            optEnd.textContent = station.name;
-            endSelect.appendChild(optEnd);
+        stations.forEach((station) => {
+            [startSelect, endSelect, createStartSelect, createEndSelect].forEach((select) => {
+                const option = document.createElement('option');
+                option.value = station.name;
+                option.dataset.stationId = station.id;
+                option.textContent = station.name;
+                select.appendChild(option);
+            });
         });
-    } catch (error) {
-        console.error('Error hydrating station dropdown elements:', error);
-    }
-};
+    };
 
-//loads the schedule in the background
+const loadTrainDropdown = async () => {
+    const trainSelect = document.getElementById('edit-train');
+    const createTrainSelect = document.querySelector('#trip-create-form [name="trainId"]');
+    const trains = await fetchAllPages('/api/trains', 'trains');
 
-    const loadScheduleDropdown = async () => {
-    const scheduleSelect = document.getElementById('edit-schedules');
-
-    try {
-        const response = await fetch('/api/schedules'); // Reuses your existing schedules API endpoint
-        if (!response.ok) throw new Error('Failed to fetch schedules.');
-        
-        const schedules = await response.json();
-
-        schedules.forEach(schedule => {
+    trains.forEach((train) => {
+        [trainSelect, createTrainSelect].forEach((select) => {
             const option = document.createElement('option');
-            option.value = schedule.id;
-            option.dataset.tripId = schedule.tripId || '';
-            option.textContent = `Schedule: ${schedule.id} (${schedule.departureTime || ''})`;
-            scheduleSelect.appendChild(option);
+            option.value = train.id;
+            option.textContent = `${train.name} (${train.id})`;
+            select.appendChild(option);
         });
-    } catch (error) {
-        console.error('Error hydrating schedule dropdown option items:', error);
-    }
+    });
 };
+
+    const addFilterOption = (select, value) => {
+        if (!value || Array.from(select.options).some((option) =>
+            option.value.toLowerCase() === value.toLowerCase()
+        )) return;
+
+        select.add(new Option(
+            value.charAt(0).toUpperCase() + value.slice(1),
+            value
+        ));
+    };
+
+    const addCreatedTripFilterOptions = (trip) => {
+        addFilterOption(document.getElementById('region-filter'), trip.region);
+        addFilterOption(document.getElementById('season-filter'), trip.bestSeason);
+        addFilterOption(document.getElementById('edit-region'), trip.region);
+        addFilterOption(document.getElementById('edit-season'), trip.bestSeason);
+    };
+
+    const tripCreateForm = document.getElementById('trip-create-form');
+    const tripCreateValidation = document.getElementById('trip-create-validation');
+    const createDaysFieldset = document.getElementById('create-schedule-days');
+    const createDaysError = document.getElementById('create-schedule-days-error');
+    attachValidationFeedback(tripCreateForm, tripCreateValidation, 'creating this trip');
+    const clearCreateDaysError = () => {
+        createDaysError.hidden = true;
+        createDaysFieldset.classList.remove('has-validation-error');
+        createDaysFieldset.removeAttribute('aria-invalid');
+        tripCreateValidation.hidden = true;
+    };
+    createDaysFieldset.addEventListener('change', clearCreateDaysError);
+    tripCreateForm.addEventListener('reset', clearCreateDaysError);
+    tripCreateForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData(tripCreateForm);
+        const trip = {
+            id: formData.get('id').trim(),
+            name: formData.get('name').trim(),
+            description: formData.get('description').trim(),
+            trainId: formData.get('trainId'),
+            region: formData.get('region').trim(),
+            duration: formData.get('duration').trim(),
+            distance: Number(formData.get('distance')),
+            bestSeason: formData.get('bestSeason').trim(),
+            startStation: formData.get('startStation'),
+            endStation: formData.get('endStation'),
+            operatingMonths: Array.from(
+                tripCreateForm.querySelector('[name="operatingMonths"]').selectedOptions
+            ).map((option) => Number(option.value)),
+            highlights: formData.get('highlights')
+                .split('\n')
+                .map((highlight) => highlight.trim())
+                .filter(Boolean),
+            imageUrl: formData.get('imageUrl').trim(),
+            schedules: [{
+                departureTime: formData.get('scheduleDepartureTime'),
+                arrivalTime: formData.get('scheduleArrivalTime'),
+                daysOfWeek: formData.getAll('scheduleDaysOfWeek'),
+            }],
+        };
+        if (trip.schedules[0].daysOfWeek.length === 0) {
+            createDaysError.textContent = 'Select at least one operating day for the initial schedule.';
+            createDaysError.hidden = false;
+            createDaysFieldset.classList.add('has-validation-error');
+            createDaysFieldset.setAttribute('aria-invalid', 'true');
+            createDaysFieldset.querySelector('input').focus();
+            tripCreateValidation.textContent = 'The initial schedule needs at least one operating day.';
+            tripCreateValidation.hidden = false;
+            return;
+        }
+        clearCreateDaysError();
+        const submitButton = tripCreateForm.querySelector('[type="submit"]');
+        submitButton.disabled = true;
+
+        try {
+            const response = await fetch('/api/trips', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(trip),
+            });
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || error.message || 'Unable to create trip.');
+            }
+
+            addCreatedTripFilterOptions(trip);
+            tripCreateForm.reset();
+            document.getElementById('admin-trips-error').hidden = true;
+            tripCreateValidation.hidden = true;
+            await loadTrips(1);
+            const successElement = document.getElementById('trip-create-success');
+            successElement.textContent = `${trip.name} was created.`;
+            successElement.hidden = false;
+
+        } catch (error) {
+            const errorElement = document.getElementById('admin-trips-error');
+            errorElement.textContent = error.message;
+            errorElement.hidden = false;
+            tripCreateValidation.textContent = error.message;
+            tripCreateValidation.hidden = false;
+            document.getElementById('trip-create-success').hidden = true;
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
 
 //loads trips, paginated 10 per page
 
     let currentPage = 1;
 
     const updatePaginationControls = (pagination) => {
-        const status = document.getElementById('trips-page-status');
         const prevButton = document.getElementById('trips-prev-page');
         const nextButton = document.getElementById('trips-next-page');
+        const pageLinks = document.getElementById('trips-page-links');
+        const paginationNav = document.getElementById('trips-pagination');
 
-        const totalPages = Math.max(pagination.totalPages, 1);
-        status.textContent = `Page ${pagination.page} of ${totalPages} (${pagination.totalItems} trips)`;
+        paginationNav.hidden = pagination.totalPages <= 1;
         prevButton.disabled = !pagination.hasPreviousPage;
         nextButton.disabled = !pagination.hasNextPage;
+        pageLinks.replaceChildren();
+        const visiblePages = [...new Set([
+            1,
+            pagination.page - 1,
+            pagination.page,
+            pagination.page + 1,
+            pagination.totalPages,
+        ])]
+            .filter((page) => page >= 1 && page <= pagination.totalPages)
+            .sort((left, right) => left - right);
+
+        let previousPage = 0;
+        visiblePages.forEach((page) => {
+            if (page - previousPage > 1) {
+                const ellipsis = document.createElement('span');
+                ellipsis.className = 'users-page-ellipsis';
+                ellipsis.textContent = '...';
+                ellipsis.setAttribute('aria-hidden', 'true');
+                pageLinks.appendChild(ellipsis);
+            }
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = String(page);
+            button.setAttribute('aria-label', `Page ${page}`);
+            if (page === pagination.page) button.setAttribute('aria-current', 'page');
+            button.addEventListener('click', () => loadTrips(page));
+            pageLinks.appendChild(button);
+            previousPage = page;
+        });
+        document.getElementById('admin-trips-results-count').textContent =
+            pagination.totalItems === 0
+                ? 'No trips to display'
+                : `Showing ${(pagination.page - 1) * pagination.limit + 1}-${Math.min(pagination.page * pagination.limit, pagination.totalItems)} of ${pagination.totalItems} trips`;
+    };
+
+    let activeFilters = {
+        region: 'all',
+        season: 'all',
+        availability: 'all',
+        scheduleStatus: 'all',
+        search: '',
+        sort: 'name',
+        order: 'asc',
     };
 
     const getActiveFilters = () => {
         const region = document.getElementById('region-filter').value;
         const season = document.getElementById('season-filter').value;
+        const availability = document.getElementById('availability-filter').value;
+        const scheduleStatus = document.getElementById('schedule-filter').value;
         const search = document.getElementById('trip-keyword-search').value.trim();
-        return { region, season, search };
+        const sort = document.getElementById('trip-sort-field').value;
+        const order = document.getElementById('trip-sort-order').value;
+        return { region, season, availability, scheduleStatus, search, sort, order };
     };
 
     const loadTrips = async (page = currentPage) => {
 
         const tripsCard = document.getElementById('trips-list');
         const templateTrip = document.getElementById('trip-card-template');
-        const { region, season, search } = getActiveFilters();
+        const {
+            region,
+            season,
+            availability,
+            scheduleStatus,
+            search,
+            sort,
+            order,
+        } = activeFilters;
 
-        const params = new URLSearchParams({ page, limit: 10 });
+        const params = new URLSearchParams({
+            page: String(page),
+            limit: '10',
+            sort,
+            order,
+        });
         if (region && region !== 'all') params.set('region', region);
         if (season && season !== 'all') params.set('season', season);
+        if (availability !== 'all') params.set('availability', availability);
+        if (scheduleStatus !== 'all') params.set('scheduleStatus', scheduleStatus);
         if (search) params.set('search', search);
 
         try {
@@ -335,6 +938,10 @@
                 clone.querySelector('.end-station').textContent = trip.endStation;
                 clone.querySelector('.trip-duration').textContent = trip.duration;
                 clone.querySelector('.trip-distance').textContent = trip.distance;
+                clone.querySelector('.trip-schedule-count').textContent =
+                    `${trip.scheduleCount || 0} active schedule${trip.scheduleCount === 1 ? '' : 's'}`;
+                clone.querySelector('.trip-train').textContent =
+                    trip.availability?.isAvailable ? trip.trainId : 'Unavailable';
                 clone.querySelector('.route-description').textContent = trip.description;
 
                 clone.querySelector('.season-badge').textContent = trip.bestSeason || '';
@@ -349,7 +956,7 @@
                     });
                 }
 
-                clone.querySelector('.edit-action-btn').addEventListener('click',() => openEditForm(trip));
+                clone.querySelector('.edit-action-btn').addEventListener('click', () => openEditForm(trip));
                 clone.querySelector('.delete-action-btn').addEventListener('click', () => handleDeleteClick(trip.id, trip.name));
 
                 tripsCard.appendChild(clone);
@@ -364,30 +971,40 @@
         }
     }
 
-    const debounce = (fn, delayMs) => {
-        let timeoutId;
-        return (...args) => {
-            clearTimeout(timeoutId);
-            timeoutId = setTimeout(() => fn(...args), delayMs);
-        };
-    };
-
     window.addEventListener('DOMContentLoaded', async () =>{
 
         const regionFilter = document.getElementById('region-filter');
         const seasonFilter = document.getElementById('season-filter');
         const keywordSearch = document.getElementById('trip-keyword-search');
+        const sortField = document.getElementById('trip-sort-field');
+        const sortOrder = document.getElementById('trip-sort-order');
+        const filtersForm = document.getElementById('admin-trips-filters');
+        const captureFilters = () => getActiveFilters();
 
-        await loadStationDropdowns();
-        await loadScheduleDropdown();
+        try {
+            await Promise.all([
+                loadStationDropdowns(),
+                loadTrainDropdown(),
+            ]);
+        } catch (error) {
+            const errorElement = document.getElementById('admin-trips-error');
+            errorElement.textContent = error.message;
+            errorElement.hidden = false;
+        }
 
+        activeFilters = captureFilters();
         await loadTrips(1);
 
-        // Region/season/search are applied server-side, so any change
-        // resets to page 1 and refetches the filtered, paginated results.
-        regionFilter.addEventListener('change', () => loadTrips(1));
-        seasonFilter.addEventListener('change', () => loadTrips(1));
-        keywordSearch.addEventListener('input', debounce(() => loadTrips(1), 300));
+        filtersForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            activeFilters = captureFilters();
+            loadTrips(1);
+        });
+        document.getElementById('admin-trips-reset').addEventListener('click', () => {
+            filtersForm.reset();
+            activeFilters = captureFilters();
+            loadTrips(1);
+        });
 
         document.getElementById('trips-prev-page').addEventListener('click', () => {
             if (currentPage <= 1) return;

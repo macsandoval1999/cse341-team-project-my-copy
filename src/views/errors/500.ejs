@@ -1,6 +1,6 @@
 <%- include('../partials/header') %>
 <h1>Something Went Wrong</h1>
-<p>
+<p class="page-description">
     We are experiencing technical difficulties. Our team has been notified and is working to fix the issue.
 </p>
 <p>
@@ -8,7 +8,7 @@
 </p>
 
 <% if (NODE_ENV === 'development') { %>
-<details open>
+<details class="error-details" open>
     <summary>Error Details:</summary>
     <pre><%= error %></pre>
     <br>

@@ -12,43 +12,45 @@ import Train from "../models/schemas/trains.js";
 import Trip from "../models/schemas/trips.js";
 import { User } from "../models/schemas/users.js";
 
-const starterCollections = [
-    ["roles", [{ name: "customer" }, { name: "admin" }]],
-    ["trips", trips],
-    ["schedules", schedules],
-    ["stations", stations],
-    ["ticket-classes", ticketClasses],
-    ["trains", trains],
-];
-
 const starterModels = {
     roles: Role,
+    trains: Train,
     trips: Trip,
     schedules: Schedule,
     stations: Station,
     "ticket-classes": TicketClass,
-    trains: Train,
+};
+
+const starterData = {
+    roles: [{ name: "customer" }, { name: "admin" }],
+    trains,
+    trips,
+    schedules,
+    stations,
+    "ticket-classes": ticketClasses,
 };
 
 const initializeDatabase = async () => {
-    for (const [collectionName, documents] of starterCollections) {
-        const Model = starterModels[collectionName];
-        await Model.deleteMany({});
-    }
-
     const insertOrder = ["roles", "trains", "trips", "schedules", "stations", "ticket-classes"];
+    await Promise.all(
+        insertOrder.map((collectionName) =>
+            starterModels[collectionName].deleteMany({})
+        )
+    );
+
     for (const collectionName of insertOrder) {
-        const documents = starterCollections.find(([name]) => name === collectionName)[1];
         const Model = starterModels[collectionName];
-        await Model.insertMany(documents);
+        await Model.insertMany(starterData[collectionName]);
     }
 
     await User.createCollection();
     const textIndex = (await User.listIndexes()).find((index) => index.weights);
-    const existingFields = Object.keys(textIndex?.weights ?? {}).sort();
-    const searchableFields = ["email", "name", "username"];
-    if (textIndex && existingFields.join(",") !== searchableFields.join(",")) {
-        await User.collection.dropIndex(textIndex.name);
+    if (textIndex) {
+        const existingFields = Object.keys(textIndex.weights).sort();
+        const searchableFields = ["email", "name", "username"];
+        if (existingFields.join(",") !== searchableFields.join(",")) {
+            await User.collection.dropIndex(textIndex.name);
+        }
     }
 
     await User.createIndexes();
@@ -58,4 +60,4 @@ const initializeDatabase = async () => {
     await Train.createIndexes();
 };
 
-export { initializeDatabase, starterCollections };
+export { initializeDatabase };

@@ -43,18 +43,27 @@ const hookTrainsCatalog = async () => {
     const paginationEl = document.getElementById('trains-pagination');
     const prevBtn = document.getElementById('trains-prev-page');
     const nextBtn = document.getElementById('trains-next-page');
-    const pageIndicatorEl = document.getElementById('trains-page-indicator');
+    const pageLinksEl = document.getElementById('trains-page-links');
+    const resultsCountEl = document.getElementById('trains-results-count');
     const searchInput = document.getElementById('trains-search');
     const typeSelect = document.getElementById('trains-type-filter');
     const powerSelect = document.getElementById('trains-power-filter');
+    const sortField = document.getElementById('trains-sort-field');
+    const sortOrder = document.getElementById('trains-sort-order');
 
     if (!listEl || !templateEl) {
         return;
     }
 
     let currentPage = 1;
-    let searchDebounceTimer = null;
     let activeRequest = null;
+    let activeFilters = {
+        q: '',
+        type: '',
+        powerSource: '',
+        sort: sortField?.value || 'name',
+        order: sortOrder?.value || 'asc',
+    };
 
     const renderTrains = (trains) => {
         const fragment = document.createDocumentFragment();
@@ -121,21 +130,11 @@ const hookTrainsCatalog = async () => {
         const params = new URLSearchParams();
         params.set('page', page);
         params.set('limit', 10);
-
-        const q = searchInput ? searchInput.value.trim() : '';
-        if (q) {
-            params.set('q', q);
-        }
-
-        const type = typeSelect ? typeSelect.value : '';
-        if (type) {
-            params.set('type', type);
-        }
-
-        const powerSource = powerSelect ? powerSelect.value : '';
-        if (powerSource) {
-            params.set('powerSource', powerSource);
-        }
+        params.set('sort', activeFilters.sort);
+        params.set('order', activeFilters.order);
+        if (activeFilters.q) params.set('q', activeFilters.q);
+        if (activeFilters.type) params.set('type', activeFilters.type);
+        if (activeFilters.powerSource) params.set('powerSource', activeFilters.powerSource);
 
         return params.toString();
     };
@@ -161,10 +160,44 @@ const hookTrainsCatalog = async () => {
             currentPage = pagination.page || page;
 
             if (paginationEl) {
-                paginationEl.hidden = false;
+                paginationEl.hidden = pagination.totalPages <= 1;
             }
-            if (pageIndicatorEl) {
-                pageIndicatorEl.textContent = `Page ${pagination.page} of ${pagination.totalPages || 1}`;
+            if (resultsCountEl) {
+                resultsCountEl.textContent = pagination.totalItems === 0
+                    ? 'No trains to display'
+                    : `Showing ${(pagination.page - 1) * pagination.limit + 1}-${Math.min(pagination.page * pagination.limit, pagination.totalItems)} of ${pagination.totalItems} trains`;
+            }
+            if (pageLinksEl) {
+                pageLinksEl.replaceChildren();
+                const visiblePages = [...new Set([
+                    1,
+                    pagination.page - 1,
+                    pagination.page,
+                    pagination.page + 1,
+                    pagination.totalPages,
+                ])]
+                    .filter((number) => number >= 1 && number <= pagination.totalPages)
+                    .sort((left, right) => left - right);
+                let previousPage = 0;
+                visiblePages.forEach((number) => {
+                    if (number - previousPage > 1) {
+                        const ellipsis = document.createElement('span');
+                        ellipsis.className = 'users-page-ellipsis';
+                        ellipsis.textContent = '...';
+                        ellipsis.setAttribute('aria-hidden', 'true');
+                        pageLinksEl.appendChild(ellipsis);
+                    }
+                    const button = document.createElement('button');
+                    button.type = 'button';
+                    button.textContent = String(number);
+                    button.setAttribute('aria-label', `Page ${number}`);
+                    if (number === pagination.page) {
+                        button.setAttribute('aria-current', 'page');
+                    }
+                    button.addEventListener('click', () => loadTrains(number));
+                    pageLinksEl.appendChild(button);
+                    previousPage = number;
+                });
             }
             if (prevBtn) {
                 prevBtn.disabled = !pagination.hasPreviousPage;
@@ -218,20 +251,24 @@ const hookTrainsCatalog = async () => {
         });
     }
 
-    if (searchInput) {
-        searchInput.addEventListener('input', () => {
-            clearTimeout(searchDebounceTimer);
-            searchDebounceTimer = setTimeout(() => loadTrains(1), 400);
-        });
-    }
-
-    if (typeSelect) {
-        typeSelect.addEventListener('change', () => loadTrains(1));
-    }
-
-    if (powerSelect) {
-        powerSelect.addEventListener('change', () => loadTrains(1));
-    }
+    const filtersForm = document.getElementById('trains-filters');
+    const captureFilters = () => ({
+        q: searchInput?.value.trim() || '',
+        type: typeSelect?.value || '',
+        powerSource: powerSelect?.value || '',
+        sort: sortField?.value || 'name',
+        order: sortOrder?.value || 'asc',
+    });
+    filtersForm?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        activeFilters = captureFilters();
+        loadTrains(1);
+    });
+    document.getElementById('trains-reset')?.addEventListener('click', () => {
+        filtersForm.reset();
+        activeFilters = captureFilters();
+        loadTrains(1);
+    });
 
     await populateFilterOptions();
     loadTrains(currentPage);
@@ -244,8 +281,32 @@ const hookBookingCatalog = async () => {
     const errorEl = document.getElementById("bookings-error");
     const emptyEl = document.getElementById("bookings-empty");
     const pageEl = document.getElementById("bookings-admin");
-    const scopeQuery =
-        pageEl?.dataset.bookingsScope === "mine" ? "&scope=mine" : "";
+    const filterForm = document.getElementById("booking-filter-form");
+    const searchInput = document.getElementById("booking-search");
+    const tripIdInput = document.getElementById("booking-trip-id");
+    const startDateInput = document.getElementById("start-date");
+    const endDateInput = document.getElementById("end-date");
+    const ticketClassFilter = document.getElementById("ticket-class");
+    const sortField = document.getElementById("sort-by");
+    const sortOrder = document.getElementById("sort-order");
+    const pageLinks = document.getElementById("booking-page-links");
+    const previousButton = document.getElementById("prev-page");
+    const nextButton = document.getElementById("next-page");
+    const paginationControls = document.getElementById("pagination-controls");
+    const resultCount = document.getElementById("booking-results-count");
+    let cachedTicketClasses = [];
+    const pageQuery = new URLSearchParams(window.location.search);
+    const activeFilters = {
+        q: pageQuery.get("q") || "",
+        tripId: pageQuery.get("tripId") || "",
+        ticketClass: pageQuery.get("ticketClass") || "",
+        startDate: pageQuery.get("startDate") || "",
+        endDate: pageQuery.get("endDate") || "",
+        sort: pageQuery.get("sort") || "createdAt",
+        order: pageQuery.get("order") || "desc",
+    };
+    let currentPage = Math.max(1, Number(pageQuery.get("page")) || 1);
+    const scope = pageEl?.dataset.bookingsScope === "mine" ? "mine" : "all";
 
     if (!listEl || !templateEl) {
         return;
@@ -255,48 +316,86 @@ const hookBookingCatalog = async () => {
         const response = await fetch(url, options);
         const payload = await response.json();
         if (!response.ok) {
+            const validationMessage = Array.isArray(payload.errors)
+                ? payload.errors.map((item) => item.message).join(' ')
+                : '';
             throw new Error(
-                payload.error || payload.message || "The request failed."
+                validationMessage || payload.error || payload.message || "The request failed."
             );
         }
         return payload;
     };
 
-    const loadBookings = async () => {
+    const syncFiltersToUrl = (page) => {
+        const params = new URLSearchParams();
+        params.set("page", String(page));
+        params.set("limit", "10");
+        params.set("sort", activeFilters.sort);
+        params.set("order", activeFilters.order);
+        if (scope === "mine") params.set("scope", "mine");
+        Object.entries(activeFilters).forEach(([key, value]) => {
+            if (value && !["sort", "order"].includes(key)) params.set(key, value);
+        });
+        window.history.replaceState({}, "", `${window.location.pathname}?${params}`);
+    };
+
+    const loadBookings = async (requestedPage = currentPage) => {
         if (loadingEl) loadingEl.hidden = false;
         if (errorEl) errorEl.hidden = true;
         if (emptyEl) emptyEl.hidden = true;
+        if (paginationControls) paginationControls.hidden = true;
 
         try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const page = urlParams.get('page') || 1;
-            const limit = urlParams.get('limit') || 10;
-            const sort = urlParams.get('sort') || 'createdAt';
-            const order = urlParams.get('order') || 'asc';
-            const startDate = urlParams.get('startDate') || '';
-            const endDate = urlParams.get('endDate') || '';
-            const ticketClass = urlParams.get('ticketClass') || '';
-            const filter = { startDate, endDate, ticketClass };
-            const ApiUrl = `/api/bookings_paginated?page=${page}&limit=${limit}&sort=${sort}&order=${order}&startDate=${startDate}&endDate=${endDate}&ticketClass=${ticketClass}${scopeQuery}`;
+            const params = new URLSearchParams({
+                page: String(requestedPage),
+                limit: "10",
+                sort: activeFilters.sort,
+                order: activeFilters.order,
+            });
+            if (scope === "mine") params.set("scope", "mine");
+            Object.entries(activeFilters).forEach(([key, value]) => {
+                if (value && !["sort", "order"].includes(key)) params.set(key, value);
+            });
+            const apiUrl = `/api/bookings?${params.toString()}`;
 
+            const bookingRequest = requestJson(apiUrl);
+            const ticketClassRequest = cachedTicketClasses.length > 0
+                ? Promise.resolve({ data: cachedTicketClasses })
+                : requestJson("/api/ticket-classes?limit=50");
             const [bookings, ticketClasses] = await Promise.all([
-                requestJson(ApiUrl),
-                requestJson("/api/ticket-classes"),
+                bookingRequest,
+                ticketClassRequest,
             ]);
+            const bookingsArray = bookings.data || [];
+            if (
+                bookingsArray.length === 0 &&
+                requestedPage > 1 &&
+                bookings.pagination.totalPages < requestedPage
+            ) {
+                await loadBookings(Math.max(1, bookings.pagination.totalPages));
+                return;
+            }
+            const ticketClassList = ticketClasses.data || [];
+            cachedTicketClasses = ticketClassList;
+            if (ticketClassFilter) {
+                ticketClassFilter.replaceChildren(new Option('All Classes', ''));
+                ticketClassList.forEach((item) => {
+                    ticketClassFilter.add(new Option(item.name, item.class));
+                });
+                ticketClassFilter.value = activeFilters.ticketClass;
+            }
+            searchInput.value = activeFilters.q;
+            tripIdInput.value = activeFilters.tripId;
+            startDateInput.value = activeFilters.startDate;
+            endDateInput.value = activeFilters.endDate;
+            sortField.value = activeFilters.sort;
+            sortOrder.value = activeFilters.order;
             const fragment = document.createDocumentFragment();
             const isAdmin = pageEl?.dataset.isAdmin === "true";
             const currentUserId = pageEl?.dataset.currentUserId;
             const currentUserEmail = pageEl?.dataset.currentUserEmail
                 ?.trim()
                 .toLowerCase();
-            console.log("bookings: ", bookings);
-            if (bookings.length === 0) {
-                const noBookingsEl = document.createElement('p');
-                noBookingsEl.textContent = 'No bookings found.';
-                fragment.appendChild(noBookingsEl);
-
-            }
-            const bookingsArray = Array.isArray(bookings) ? bookings : bookings.bookings || [];
             bookingsArray.forEach((booking) => {
                 const card = templateEl.content.cloneNode(true);
                 const article = card.querySelector(".train-card");
@@ -331,9 +430,6 @@ const hookBookingCatalog = async () => {
                 const upgradeDialog = card.querySelector(
                     ".booking-upgrade-dialog"
                 );
-                const deleteDialog = card.querySelector(
-                    ".booking-delete-dialog"
-                );
                 const viewActions = card.querySelector(".booking-view-actions");
                 const ownerMessage = card.querySelector(
                     ".booking-owner-message"
@@ -341,11 +437,10 @@ const hookBookingCatalog = async () => {
                 const passengerError = card.querySelector(
                     ".booking-passenger-error"
                 );
-                const deleteError = card.querySelector(".booking-delete-error");
-                const currentClass = ticketClasses.find(
+                const currentClass = ticketClassList.find(
                     (item) => item.class === booking.ticketClass
                 );
-                const availableClasses = ticketClasses.filter(
+                const availableClasses = ticketClassList.filter(
                     (item) =>
                         currentClass &&
                         item.priceMultiplier > currentClass.priceMultiplier &&
@@ -438,10 +533,6 @@ const hookBookingCatalog = async () => {
                     upgradeForm.querySelector(".btn-save-booking").hidden =
                         true;
                 });
-                deleteDialog.addEventListener("close", () => {
-                    deleteError.hidden = true;
-                    deleteError.textContent = "";
-                });
                 card.querySelector(".btn-edit-passengers").hidden = !canManage;
                 const upgradeButton = card.querySelector(
                     ".btn-upgrade-booking"
@@ -456,101 +547,48 @@ const hookBookingCatalog = async () => {
             });
 
             listEl.replaceChildren(fragment);
-            if (emptyEl) emptyEl.hidden = bookings.length !== 0;
-            // add pagination controls based on response
-            const paginationControls = document.getElementById('pagination-controls');
-
-            if (paginationControls) {
-                const totalPages = Math.ceil(bookings.total / bookings.limit);
-                console.log("totalPages: ", totalPages);
-                paginationControls.innerHTML = '';
-                for (let i = 1; i <= totalPages; i++) {
-                    const pageLink = document.createElement('a');
-                    pageLink.href = `?page=${i}&limit=${bookings.limit}&sort=${sort}&order=${order}&startDate=${startDate}&endDate=${endDate}&ticketClass=${ticketClass}${scopeQuery}`;
-                    pageLink.textContent = i;
-                    if (i === parseInt(page)) {
-                        pageLink.style.fontWeight = 'bold';
-                    }
-                    paginationControls.appendChild(pageLink);
+            if (emptyEl) emptyEl.hidden = bookingsArray.length !== 0;
+            const pagination = bookings.pagination;
+            currentPage = pagination.page;
+            syncFiltersToUrl(currentPage);
+            paginationControls.hidden = pagination.totalPages <= 1;
+            resultCount.textContent = pagination.totalItems === 0
+                ? "No bookings to display"
+                : `Showing ${(pagination.page - 1) * pagination.limit + 1}-${Math.min(pagination.page * pagination.limit, pagination.totalItems)} of ${pagination.totalItems} bookings`;
+            previousButton.disabled = !pagination.hasPreviousPage;
+            nextButton.disabled = !pagination.hasNextPage;
+            previousButton.onclick = () => loadBookings(pagination.page - 1);
+            nextButton.onclick = () => loadBookings(pagination.page + 1);
+            pageLinks.replaceChildren();
+            const visiblePages = [...new Set([
+                1,
+                pagination.page - 1,
+                pagination.page,
+                pagination.page + 1,
+                pagination.totalPages,
+            ])]
+                .filter((number) => number >= 1 && number <= pagination.totalPages)
+                .sort((left, right) => left - right);
+            let previousPage = 0;
+            visiblePages.forEach((number) => {
+                if (number - previousPage > 1) {
+                    const ellipsis = document.createElement("span");
+                    ellipsis.className = "users-page-ellipsis";
+                    ellipsis.textContent = "...";
+                    ellipsis.setAttribute("aria-hidden", "true");
+                    pageLinks.appendChild(ellipsis);
                 }
-            }
-            // add sorting controls based on response
-            const sortCategory = document.getElementById('sort-by');
-            if (sortCategory) {
-                sortCategory.innerHTML = '';
-                const sortFields = ['createdAt', 'selectedDay', 'ticketClass', 'tripId'];
-                sortFields.forEach(field => {
-                    const sortOption = document.createElement('option');
-                    sortOption.textContent = `${field}`;
-                    sortOption.value = `${field}`;
-                    if (field == sort) {
-                        sortOption.selected = true;
-                    }
-                    sortCategory.appendChild(sortOption);
-                });
-            }
-
-            sortCategory.addEventListener('change', (event) => {
-                const target = event.target.value;
-
-                // Check if the user selected a valid URL option (not the placeholder)
-                if (target) {
-                    window.location.href = `?page=${page}&limit=${limit}&sort=${target}&order=${order}&startDate=${startDate}&endDate=${endDate}&ticketClass=${ticketClass}${scopeQuery}`;
+                const button = document.createElement("button");
+                button.type = "button";
+                button.textContent = String(number);
+                button.setAttribute("aria-label", `Page ${number}`);
+                if (number === pagination.page) {
+                    button.setAttribute("aria-current", "page");
                 }
+                button.addEventListener("click", () => loadBookings(number));
+                pageLinks.appendChild(button);
+                previousPage = number;
             });
-            const sortOrder = document.getElementById('sort-order');
-            if (sortOrder) {
-                sortOrder.innerHTML = '';
-                const sortFields = ['asc', 'desc'];
-                sortFields.forEach(field => {
-                    const sortOption = document.createElement('option');
-                    sortOption.textContent = `${field}`;
-                    sortOption.value = `${field}`;
-                    if (field == order) {
-                        sortOption.selected = true;
-                    }
-                    sortOrder.appendChild(sortOption);
-                });
-            }
-
-            sortOrder.addEventListener('change', (event) => {
-                const target = event.target.value;
-
-                // Check if the user selected a valid URL option (not the placeholder)
-                if (target) {
-                    window.location.href = `?page=${page}&limit=${limit}&sort=${sort}&order=${target}${scopeQuery}`;
-                }
-            });
-            // add date range and ticket class filters controls based on response
-
-            const bookingFilterForm = document.getElementById("ticket-class");
-            if (bookingFilterForm) {
-                try {
-                    const ticketClassesUrl = "/api/ticket-classes";
-                    const response = await fetch(ticketClassesUrl, { cache: 'no-store' });
-
-                    // Check if the response status is 200-299
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
-                    }
-
-                    // Parse the response body as JSON
-                    const data = await response.json();
-                    console.log(data);
-                    for (const item of data) {
-                        const option = document.createElement('option');
-                        option.value = item.class;
-                        option.textContent = item.name;
-                        if (item.class === ticketClass) {
-                            option.selected = true;
-                        }
-                        bookingFilterForm.appendChild(option);
-                    }
-                } catch (error) {
-                    console.error("Fetch error:", error);
-                }
-            }
-
 
         } catch (error) {
             if (errorEl) {
@@ -563,6 +601,42 @@ const hookBookingCatalog = async () => {
         }
     };
 
+    filterForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        activeFilters.q = searchInput.value.trim();
+        activeFilters.tripId = tripIdInput.value.trim();
+        activeFilters.ticketClass = ticketClassFilter.value;
+        activeFilters.startDate = startDateInput.value;
+        activeFilters.endDate = endDateInput.value;
+        activeFilters.sort = sortField.value;
+        activeFilters.order = sortOrder.value;
+        loadBookings(1);
+    });
+
+    document.getElementById("booking-reset").addEventListener("click", () => {
+        filterForm.reset();
+        activeFilters.q = "";
+        activeFilters.tripId = "";
+        activeFilters.ticketClass = "";
+        activeFilters.startDate = "";
+        activeFilters.endDate = "";
+        activeFilters.sort = "createdAt";
+        activeFilters.order = "desc";
+        loadBookings(1);
+    });
+
+    searchInput.value = activeFilters.q;
+    tripIdInput.value = activeFilters.tripId;
+    startDateInput.value = activeFilters.startDate;
+    endDateInput.value = activeFilters.endDate;
+    sortField.value = activeFilters.sort;
+    sortOrder.value = activeFilters.order;
+
+    listEl.addEventListener("click", (event) => {
+        if (event.target.matches("dialog.booking-flow-dialog")) {
+            event.target.close();
+        }
+    });
 
     listEl.addEventListener("click", async (event) => {
         const button = event.target.closest("button");
@@ -573,7 +647,6 @@ const hookBookingCatalog = async () => {
             ".booking-passenger-dialog"
         );
         const upgradeDialog = article.querySelector(".booking-upgrade-dialog");
-        const deleteDialog = article.querySelector(".booking-delete-dialog");
 
         if (button.matches(".btn-edit-passengers")) {
             passengerDialog.showModal();
@@ -584,25 +657,27 @@ const hookBookingCatalog = async () => {
         } else if (button.matches(".btn-cancel-upgrade")) {
             upgradeDialog.close();
         } else if (button.matches(".btn-delete-booking")) {
-            deleteDialog.showModal();
-        } else if (button.matches(".btn-cancel-delete")) {
-            deleteDialog.close();
-        } else if (button.matches(".btn-delete-confirm")) {
-            const deleteError = deleteDialog.querySelector(
-                ".booking-delete-error"
-            );
+            const bookingId = article.dataset.id;
+            const confirmed = await window.confirmAdminDelete({
+                itemName: "booking",
+                identifier: bookingId,
+                identifierLabel: "booking confirmation ID",
+                description: "This permanently deletes this booking and its passenger details. This cannot be undone.",
+            });
+            if (!confirmed) return;
             try {
                 await requestJson(
-                    `/api/bookings/${encodeURIComponent(article.dataset.id)}`,
+                    `/api/bookings/${encodeURIComponent(bookingId)}`,
                     {
                         method: "DELETE",
                     }
                 );
-                deleteDialog.close();
                 await loadBookings();
             } catch (error) {
-                deleteError.textContent = error.message;
-                deleteError.hidden = false;
+                if (errorEl) {
+                    errorEl.textContent = error.message;
+                    errorEl.hidden = false;
+                }
             }
         }
     });

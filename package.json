@@ -18,6 +18,7 @@
     },
     "scripts": {
         "db:import": "node --env-file=.env src/db/import.js",
+        "db:repair-schedules": "node --env-file=.env src/db/repair-schedules.js",
         "dev": "nodemon --env-file=.env server.js",
         "reset": "node restore.js 3000 3001",
         "start": "node --env-file=.env server.js",

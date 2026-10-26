@@ -15,8 +15,8 @@ describe("GET /api/schedules", () => {
         // Assert
         expect(response.status).toBe(200);
         expect(response.headers["content-type"]).toContain("application/json");
-        expect(response.body).toBeInstanceOf(Array);
-        expect(response.body.length).toBeGreaterThan(0);
+        expect(response.body.data).toBeInstanceOf(Array);
+        expect(response.body.data.length).toBeGreaterThan(0);
     });
 
     // 2. Test that the response includes known seeded schedule data
@@ -29,7 +29,7 @@ describe("GET /api/schedules", () => {
 
         // Assert
         expect(response.status).toBe(200);
-        expect(response.body).toEqual(
+        expect(response.body.data).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({
                     id: 1,
@@ -56,7 +56,7 @@ describe("GET /api/schedules", () => {
 
         // Act
         const response = await request(app).get("/api/schedules");
-        const scheduleIds = response.body.map((schedule) => schedule.id);
+        const scheduleIds = response.body.data.map((schedule) => schedule.id);
 
         // Assert
         expect(response.status).toBe(200);
@@ -104,7 +104,7 @@ describe("GET /api/schedules/:id", () => {
         const detailResponse = await request(app).get(
             `/api/schedules/${scheduleId}`
         );
-        const listedSchedule = listResponse.body.find(
+        const listedSchedule = listResponse.body.data.find(
             (schedule) => schedule.id === scheduleId
         );
 
